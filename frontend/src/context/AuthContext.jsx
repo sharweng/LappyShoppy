@@ -2,6 +2,9 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import { 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
+  FacebookAuthProvider,
   signOut,
   onAuthStateChanged,
   updateProfile,
@@ -43,6 +46,32 @@ export const AuthProvider = ({ children }) => {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       return userCredential;
     } catch (error) {
+      throw error;
+    }
+  };
+
+  // Google Sign In
+  const signInWithGoogle = async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      toast.success('Signed in with Google successfully!');
+      return result;
+    } catch (error) {
+      console.error('Google sign in error:', error);
+      throw error;
+    }
+  };
+
+  // Facebook Sign In
+  const signInWithFacebook = async () => {
+    try {
+      const provider = new FacebookAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      toast.success('Signed in with Facebook successfully!');
+      return result;
+    } catch (error) {
+      console.error('Facebook sign in error:', error);
       throw error;
     }
   };
@@ -124,6 +153,8 @@ export const AuthProvider = ({ children }) => {
     userProfile,
     signup,
     login,
+    signInWithGoogle,
+    signInWithFacebook,
     logout,
     updateUserPassword,
     getUserProfile,

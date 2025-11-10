@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { Laptop, Shield, Zap, ShoppingBag, UserPlus } from 'lucide-react';
 
 const Home = () => {
   return (
@@ -18,15 +19,17 @@ const Home = () => {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
               to="/products"
-              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-lg text-lg font-semibold transition duration-300 shadow-lg hover:shadow-xl"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-lg text-lg font-semibold transition duration-300 shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
             >
-              Shop Now
+              <ShoppingBag className="w-5 h-5" />
+              <span>Shop Now</span>
             </Link>
             <Link
               to="/register"
-              className="bg-white hover:bg-gray-50 text-blue-600 px-8 py-4 rounded-lg text-lg font-semibold transition duration-300 shadow-lg hover:shadow-xl border-2 border-blue-600"
+              className="bg-white hover:bg-gray-50 text-blue-600 px-8 py-4 rounded-lg text-lg font-semibold transition duration-300 shadow-lg hover:shadow-xl border-2 border-blue-600 flex items-center justify-center space-x-2"
             >
-              Sign Up
+              <UserPlus className="w-5 h-5" />
+              <span>Sign Up</span>
             </Link>
           </div>
         </div>
@@ -35,19 +38,7 @@ const Home = () => {
         <div className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="bg-white p-8 rounded-xl shadow-lg hover:shadow-2xl transition duration-300">
             <div className="flex justify-center mb-4">
-              <svg
-                className="w-16 h-16 text-blue-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                />
-              </svg>
+              <Laptop className="w-16 h-16 text-blue-600" />
             </div>
             <h3 className="text-xl font-bold text-gray-900 mb-2 text-center">
               Premium Selection
@@ -59,19 +50,7 @@ const Home = () => {
 
           <div className="bg-white p-8 rounded-xl shadow-lg hover:shadow-2xl transition duration-300">
             <div className="flex justify-center mb-4">
-              <svg
-                className="w-16 h-16 text-blue-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                />
-              </svg>
+              <Shield className="w-16 h-16 text-blue-600" />
             </div>
             <h3 className="text-xl font-bold text-gray-900 mb-2 text-center">
               Secure Shopping
@@ -83,19 +62,7 @@ const Home = () => {
 
           <div className="bg-white p-8 rounded-xl shadow-lg hover:shadow-2xl transition duration-300">
             <div className="flex justify-center mb-4">
-              <svg
-                className="w-16 h-16 text-blue-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M13 10V3L4 14h7v7l9-11h-7z"
-                />
-              </svg>
+              <Zap className="w-16 h-16 text-blue-600" />
             </div>
             <h3 className="text-xl font-bold text-gray-900 mb-2 text-center">
               Fast Delivery
