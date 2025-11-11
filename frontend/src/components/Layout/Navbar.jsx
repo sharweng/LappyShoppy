@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Laptop, Home, ShoppingBag, User, LogOut } from 'lucide-react';
+import { Laptop, Home, ShoppingBag, LogOut } from 'lucide-react';
 
 const Navbar = () => {
   const { currentUser, logout } = useAuth();
@@ -46,10 +46,12 @@ const Navbar = () => {
               <>
                 <Link
                   to="/profile"
-                  className="text-white hover:text-blue-200 transition duration-300 font-medium flex items-center space-x-1"
+                  className="flex items-center space-x-2 text-white hover:text-blue-200 transition duration-300"
                 >
-                  <User className="w-4 h-4" />
-                  <span>Profile</span>
+                  <div className="w-8 h-8 bg-blue-400 rounded-full flex items-center justify-center text-white font-semibold">
+                    {currentUser.displayName?.charAt(0).toUpperCase() || currentUser.email?.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="text-sm font-medium">{currentUser.displayName || currentUser.email}</span>
                 </Link>
                 <button
                   onClick={handleLogout}
@@ -58,12 +60,6 @@ const Navbar = () => {
                   <LogOut className="w-4 h-4" />
                   <span>Logout</span>
                 </button>
-                <div className="flex items-center space-x-2">
-                  <div className="w-8 h-8 bg-blue-400 rounded-full flex items-center justify-center text-white font-semibold">
-                    {currentUser.displayName?.charAt(0).toUpperCase() || currentUser.email?.charAt(0).toUpperCase()}
-                  </div>
-                  <span className="text-white text-sm">{currentUser.displayName || currentUser.email}</span>
-                </div>
               </>
             ) : (
               <>

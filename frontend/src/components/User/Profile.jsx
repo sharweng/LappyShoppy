@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { updateProfile } from 'firebase/auth';
-import { storage } from '../../firebase.config';
+import axios from 'axios';
 
 const Profile = () => {
   const { currentUser, updateUserPassword } = useAuth();
@@ -49,23 +48,36 @@ const Profile = () => {
         toast.error('Image size should be less than 5MB');
         return;
       }
-      setSelectedImage(file);
+      
       const reader = new FileReader();
       reader.onloadend = () => {
+        setSelectedImage(reader.result); // Store base64 string
         setPreviewImage(reader.result);
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const uploadImage = async (file) => {
+  // Upload image to Cloudinary via backend endpoint (no auth required)
+  const uploadToCloudinary = async (base64Image) => {
     try {
-      const storageRef = ref(storage, `avatars/${currentUser.uid}/${Date.now()}_${file.name}`);
-      const snapshot = await uploadBytes(storageRef, file);
-      const downloadURL = await getDownloadURL(snapshot.ref);
-      return downloadURL;
+      const response = await axios.post(
+        'http://localhost:4001/api/v1/upload/avatar',
+        { image: base64Image },
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      if (response.data.success) {
+        return response.data.url;
+      } else {
+        throw new Error(response.data.message || 'Upload failed');
+      }
     } catch (error) {
-      console.error('Error uploading image:', error);
+      console.error('Cloudinary upload error:', error);
       throw error;
     }
   };
@@ -79,10 +91,10 @@ const Profile = () => {
 
       // Upload new image if selected
       if (selectedImage) {
-        photoURL = await uploadImage(selectedImage);
+        photoURL = await uploadToCloudinary(selectedImage);
       }
 
-      // Update Firebase profile
+      // Update Firebase profile with display name and photo URL
       await updateProfile(currentUser, {
         displayName: profileData.displayName,
         photoURL: photoURL
@@ -94,7 +106,7 @@ const Profile = () => {
       toast.success('Profile updated successfully!');
     } catch (error) {
       console.error('Profile update error:', error);
-      toast.error('Failed to update profile');
+      toast.error(error.response?.data?.message || error.message || 'Failed to update profile');
     } finally {
       setLoading(false);
     }
