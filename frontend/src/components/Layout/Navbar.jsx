@@ -48,10 +48,20 @@ const Navbar = () => {
                   to="/profile"
                   className="flex items-center space-x-2 text-white hover:text-blue-200 transition duration-300"
                 >
-                  <div className="w-8 h-8 bg-blue-400 rounded-full flex items-center justify-center text-white font-semibold">
-                    {currentUser.displayName?.charAt(0).toUpperCase() || currentUser.email?.charAt(0).toUpperCase()}
-                  </div>
-                  <span className="text-sm font-medium">{currentUser.displayName || currentUser.email}</span>
+                  {currentUser.photoURL ? (
+                    <img 
+                      src={currentUser.photoURL} 
+                      alt="Profile" 
+                      className="w-8 h-8 rounded-full object-cover border-2 border-white"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 bg-blue-400 rounded-full flex items-center justify-center text-white font-semibold border-2 border-white">
+                      {currentUser.displayName?.charAt(0).toUpperCase() || currentUser.email?.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <span className="text-sm font-medium">
+                    {currentUser.displayName?.split(' ')[0] || currentUser.email?.split('@')[0]}
+                  </span>
                 </Link>
                 <button
                   onClick={handleLogout}

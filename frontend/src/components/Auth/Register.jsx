@@ -76,7 +76,7 @@ const Register = () => {
     try {
       await signup(email, password, name);
       toast.success('Registration successful!');
-      navigate('/login');
+      navigate('/');
     } catch (error) {
       console.error('Registration error:', error);
       if (error.code === 'auth/email-already-in-use') {
