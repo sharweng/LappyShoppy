@@ -67,7 +67,8 @@ const Profile = () => {
         {
           headers: {
             'Content-Type': 'application/json'
-          }
+          },
+          timeout: 60000 // 60 second timeout
         }
       );
       
@@ -78,6 +79,16 @@ const Profile = () => {
       }
     } catch (error) {
       console.error('Cloudinary upload error:', error);
+      
+      // Handle timeout errors specifically
+      if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+        throw new Error('Upload timeout. Please check your internet connection and try again with a smaller image.');
+      }
+      
+      if (error.response?.data?.error === 'TIMEOUT') {
+        throw new Error('Upload timeout. Your connection may be slow. Try with a smaller image.');
+      }
+      
       throw error;
     }
   };
@@ -91,6 +102,7 @@ const Profile = () => {
 
       // Upload new image if selected
       if (selectedImage) {
+        toast.info('Uploading image... This may take a moment on slow connections.');
         photoURL = await uploadToCloudinary(selectedImage);
       }
 
@@ -106,7 +118,8 @@ const Profile = () => {
       toast.success('Profile updated successfully!');
     } catch (error) {
       console.error('Profile update error:', error);
-      toast.error(error.response?.data?.message || error.message || 'Failed to update profile');
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to update profile';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

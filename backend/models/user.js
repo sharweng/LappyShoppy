@@ -18,7 +18,7 @@ const userSchema = new mongoose.Schema({
     },
     password: {
         type: String,
-        required: [true, 'Please enter your password'],
+        required: false, // Password is optional since Firebase handles auth
         minlength: [6, 'Your password must be longer than 6 characters'],
         select: false
     },
@@ -44,10 +44,12 @@ const userSchema = new mongoose.Schema({
     resetPasswordExpire: Date
 })
 userSchema.pre('save', async function (next) {
-    if (!this.isModified('password')) {
-        next()
+    // Only hash password if it exists and has been modified
+    if (!this.password || !this.isModified('password')) {
+        return next()
     }
     this.password = await bcrypt.hash(this.password, 10)
+    next()
 });
 
 userSchema.methods.getJwtToken = function () {

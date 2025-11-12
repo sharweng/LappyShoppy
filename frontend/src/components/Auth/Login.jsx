@@ -59,7 +59,13 @@ const Login = () => {
     try {
       await login(email, password);
       toast.success('Login successful!');
-      navigate('/');
+      
+      // Check if user is admin and redirect accordingly
+      if (email === 'admin@lappyshoppy.com') {
+        navigate('/admin/dashboard');
+      } else {
+        navigate('/');
+      }
     } catch (error) {
       console.error('Login error:', error);
       if (error.code === 'auth/user-not-found') {
@@ -217,9 +223,9 @@ const Login = () => {
             </div>
 
             <div className="text-sm">
-              <a href="#" className="font-medium text-blue-600 hover:text-blue-500">
+              <Link to="/password/forgot" className="font-medium text-blue-600 hover:text-blue-500">
                 Forgot password?
-              </a>
+              </Link>
             </div>
           </div>
 

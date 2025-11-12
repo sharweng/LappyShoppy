@@ -8,9 +8,13 @@ import Navbar from './components/Layout/Navbar';
 import Home from './components/Home';
 import Register from './components/Auth/Register';
 import Login from './components/Auth/Login';
+import ForgotPassword from './components/Auth/ForgotPassword';
+import ResetPassword from './components/Auth/ResetPassword';
 import Profile from './components/User/Profile';
 import Products from './components/Product/Products';
+import Dashboard from './components/Admin/Dashboard';
 import ProtectedRoute from './components/Route/ProtectedRoute';
+import AdminRoute from './components/Route/AdminRoute';
 
 function App() {
   return (
@@ -22,6 +26,8 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/register" element={<Register />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/password/forgot" element={<ForgotPassword />} />
+            <Route path="/password/reset/:token" element={<ResetPassword />} />
             <Route path="/products" element={<Products />} />
             <Route
               path="/profile"
@@ -29,6 +35,14 @@ function App() {
                 <ProtectedRoute>
                   <Profile />
                 </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/dashboard"
+              element={
+                <AdminRoute>
+                  <Dashboard />
+                </AdminRoute>
               }
             />
           </Routes>

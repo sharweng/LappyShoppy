@@ -15,6 +15,7 @@
 /build
 
 *.md
+scripts/
 
 # misc
 .DS_Store

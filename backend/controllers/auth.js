@@ -1,38 +1,94 @@
 const User = require('../models/user');
-
-
 const crypto = require('crypto')
 const cloudinary = require('cloudinary')
 const sendEmail = require('../utils/sendEmail')
 
 exports.registerUser = async (req, res, next) => {
-console.log(req.body)
-    const result = await cloudinary.v2.uploader.upload(req.body.avatar, {
-        folder: 'avatars',
-        width: 150,
-        crop: "scale"
-    }, (err, res) => {
-        console.log(err, res);
-    });
-    const { name, email, password, } = req.body;
-    const user = await User.create({
-        name,
-        email,
-        password,
-        avatar: {
-            public_id: result.public_id,
-            url: result.secure_url
-        },
-    })
-    //test token
-    const token = user.getJwtToken();
+    try {
+        console.log('Registration request received');
+        console.log('Email:', req.body.email);
+        console.log('Name:', req.body.name);
+        console.log('Has avatar:', !!req.body.avatar);
+        
+        const { name, email, password, avatar } = req.body;
+        
+        // Validate required fields (password optional since Firebase handles it)
+        if (!name || !email) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Please provide name and email' 
+            });
+        }
+        
+        // Check if user already exists
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            console.log('User already exists:', email);
+            return res.status(400).json({ 
+                success: false, 
+                message: 'User already exists with this email' 
+            });
+        }
+        
+        let avatarData = {
+            public_id: 'default_avatar',
+            url: 'https://res.cloudinary.com/dcug5cq7c/image/upload/v1234567890/default-avatar.png'
+        };
+        
+        // Upload avatar to Cloudinary if provided
+        if (avatar && avatar.startsWith('data:image')) {
+            console.log('Uploading avatar to Cloudinary...');
+            try {
+                const result = await cloudinary.v2.uploader.upload(avatar, {
+                    folder: 'avatars',
+                    width: 150,
+                    crop: "scale",
+                    timeout: 60000
+                });
+                avatarData = {
+                    public_id: result.public_id,
+                    url: result.secure_url
+                };
+                console.log('Avatar uploaded successfully');
+            } catch (uploadError) {
+                console.error('Avatar upload failed:', uploadError.message);
+                // Continue with default avatar if upload fails
+            }
+        }
+        
+        // Create user
+        console.log('Creating user in MongoDB...');
+        const userData = {
+            name,
+            email,
+            avatar: avatarData
+        };
+        
+        // Only add password if provided (for password reset functionality)
+        if (password) {
+            userData.password = password;
+        }
+        
+        const user = await User.create(userData);
+        
+        console.log('User created successfully:', user._id);
+        
+        // Generate token
+        const token = user.getJwtToken();
 
-    return res.status(201).json({
-        success: true,
-        user,
-        token
-    })
-    // sendToken(user, 200, res)
+        return res.status(201).json({
+            success: true,
+            user,
+            token
+        });
+    } catch (error) {
+        console.error('Registration error:', error.message);
+        console.error('Error stack:', error.stack);
+        return res.status(500).json({
+            success: false,
+            message: error.message || 'Error during registration'
+        });
+    }
 }
 
 exports.loginUser = async (req, res, next) => {
@@ -85,7 +141,7 @@ exports.forgotPassword = async (req, res, next) => {
     try {
         await sendEmail({
             email: user.email,
-            subject: 'ShopIT Password Recovery',
+            subject: 'Lappy Shoppy Password Recovery',
             message
         })
 

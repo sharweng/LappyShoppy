@@ -5,6 +5,7 @@ import { toast } from 'react-toastify';
 import { Laptop, User, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { FcGoogle } from 'react-icons/fc';
 import { FaFacebook } from 'react-icons/fa';
+import axios from 'axios';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -74,7 +75,24 @@ const Register = () => {
     setLoading(true);
 
     try {
+      // Step 1: Create user in Firebase
       await signup(email, password, name);
+      
+      // Step 2: Also register in MongoDB backend (WITHOUT password - Firebase handles auth)
+      const defaultAvatar = `data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iIzM3NTFGRiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjYwIiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9IkFyaWFsIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+JHtuYW1lLmNoYXJBdCgwKS50b1VwcGVyQ2FzZSgpfTwvdGV4dD48L3N2Zz4=`;
+      
+      try {
+        await axios.post('http://localhost:4001/api/v1/register', {
+          name,
+          email,
+          // No password - Firebase handles authentication
+          avatar: defaultAvatar
+        });
+      } catch (backendError) {
+        console.log('Backend registration failed (non-critical):', backendError.message);
+        // Don't fail the registration if backend fails
+      }
+      
       toast.success('Registration successful!');
       navigate('/');
     } catch (error) {
