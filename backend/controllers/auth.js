@@ -164,7 +164,7 @@ exports.resetPassword = async (req, res, next) => {
     // Hash URL token
     const resetPasswordToken = crypto.createHash('sha256').update(req.params.token).digest('hex')
     const user = await User.findOne({
-        // resetPasswordToken,
+        resetPasswordToken,
         resetPasswordExpire: { $gt: Date.now() }
     })
     console.log(user)
@@ -191,6 +191,97 @@ exports.resetPassword = async (req, res, next) => {
         user
     });
    
+}
+
+// Verify reset token - returns user email if valid
+exports.verifyResetToken = async (req, res, next) => {
+    try {
+        const resetPasswordToken = crypto.createHash('sha256').update(req.params.token).digest('hex');
+        const user = await User.findOne({
+            resetPasswordToken,
+            resetPasswordExpire: { $gt: Date.now() }
+        });
+
+        if (!user) {
+            return res.status(400).json({ 
+                success: false,
+                message: 'Password reset token is invalid or has expired' 
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            email: user.email
+        });
+    } catch (error) {
+        console.error('Verify reset token error:', error);
+        return res.status(500).json({ 
+            success: false,
+            message: 'Error verifying reset token' 
+        });
+    }
+}
+
+// Reset password using Firebase
+exports.resetPasswordWithFirebase = async (req, res, next) => {
+    try {
+        const admin = require('../config/firebase');
+        const resetPasswordToken = crypto.createHash('sha256').update(req.params.token).digest('hex');
+        
+        const user = await User.findOne({
+            resetPasswordToken,
+            resetPasswordExpire: { $gt: Date.now() }
+        });
+
+        if (!user) {
+            return res.status(400).json({ 
+                success: false,
+                message: 'Password reset token is invalid or has expired' 
+            });
+        }
+
+        const { newPassword } = req.body;
+
+        if (!newPassword || newPassword.length < 6) {
+            return res.status(400).json({ 
+                success: false,
+                message: 'Password must be at least 6 characters' 
+            });
+        }
+
+        // Update password in Firebase using Admin SDK
+        try {
+            // Get user from Firebase by email
+            const firebaseUser = await admin.auth().getUserByEmail(user.email);
+            
+            // Update the password
+            await admin.auth().updateUser(firebaseUser.uid, {
+                password: newPassword
+            });
+
+            // Clear reset token in MongoDB
+            user.resetPasswordToken = undefined;
+            user.resetPasswordExpire = undefined;
+            await user.save();
+
+            return res.status(200).json({
+                success: true,
+                message: 'Password reset successfully'
+            });
+        } catch (firebaseError) {
+            console.error('Firebase password update error:', firebaseError);
+            return res.status(500).json({ 
+                success: false,
+                message: 'Failed to update password in authentication system' 
+            });
+        }
+    } catch (error) {
+        console.error('Reset password error:', error);
+        return res.status(500).json({ 
+            success: false,
+            message: 'Error resetting password' 
+        });
+    }
 }
 
 exports.getUserProfile = async (req, res, next) => {

@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { Laptop, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { signInWithEmailAndPassword, updatePassword } from 'firebase/auth';
+import { auth } from '../../firebase.config';
 import axios from 'axios';
 
 const ResetPassword = () => {
@@ -37,18 +39,34 @@ const ResetPassword = () => {
     setLoading(true);
 
     try {
-      const { data } = await axios.put(
-        `http://localhost:4001/api/v1/password/reset/${token}`,
-        { password, confirmPassword }
+      // Step 1: Verify the token and get user email from backend
+      const { data } = await axios.get(
+        `http://localhost:4001/api/v1/password/reset/${token}/verify`
       );
 
-      if (data.success) {
-        toast.success('Password reset successfully!');
+      if (!data.success) {
+        toast.error('Invalid or expired reset token');
+        setLoading(false);
+        return;
+      }
+
+      const userEmail = data.email;
+
+      // Step 2: Sign in the user temporarily with a temporary auth method
+      // Since we need to update password in Firebase, we'll need the user to be authenticated
+      // But we don't have their old password. So we'll use a backend endpoint to get a custom token
+      const authResponse = await axios.post(
+        `http://localhost:4001/api/v1/password/reset/${token}/auth`,
+        { newPassword: password }
+      );
+
+      if (authResponse.data.success) {
+        toast.success('Password reset successfully! Please login with your new password.');
         navigate('/login');
       }
     } catch (error) {
       console.error('Reset password error:', error);
-      toast.error(error.response?.data?.message || 'Failed to reset password');
+      toast.error(error.response?.data?.message || 'Failed to reset password. The link may have expired.');
     } finally {
       setLoading(false);
     }

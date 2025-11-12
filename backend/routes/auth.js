@@ -7,6 +7,8 @@ const {
     loginUser,
     forgotPassword,
     resetPassword,
+    verifyResetToken,
+    resetPasswordWithFirebase,
     getUserProfile,
     updateProfile,
     updatePassword,
@@ -21,6 +23,8 @@ const {isAuthenticatedUser, authorizeRoles} = require('../middlewares/auth')
 router.post('/register', registerUser);
 router.post('/login', loginUser);
 router.post('/password/forgot', forgotPassword);
+router.get('/password/reset/:token/verify', verifyResetToken);
+router.post('/password/reset/:token/auth', resetPasswordWithFirebase);
 router.put('/password/reset/:token', resetPassword);
 router.get('/me',  isAuthenticatedUser, getUserProfile)
 router.put('/me/update', isAuthenticatedUser,  upload.single("avatar"), updateProfile)
