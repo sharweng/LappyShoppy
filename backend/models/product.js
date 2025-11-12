@@ -17,6 +17,35 @@ const productSchema = new mongoose.Schema({
         type: String,
         required: [true, 'Please enter product description'],
     },
+    // Laptop-specific fields
+    brand: {
+        type: String,
+        required: [true, 'Please enter laptop brand']
+    },
+    processor: {
+        type: String,
+        required: [true, 'Please enter processor details']
+    },
+    ram: {
+        type: String,
+        required: [true, 'Please enter RAM size']
+    },
+    storage: {
+        type: String,
+        required: [true, 'Please enter storage details']
+    },
+    screenSize: {
+        type: String,
+        required: [true, 'Please enter screen size']
+    },
+    graphics: {
+        type: String,
+        default: 'Integrated'
+    },
+    operatingSystem: {
+        type: String,
+        default: 'Windows 11'
+    },
     ratings: {
         type: Number,
         default: 0

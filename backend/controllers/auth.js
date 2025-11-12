@@ -9,8 +9,9 @@ exports.registerUser = async (req, res, next) => {
         console.log('Email:', req.body.email);
         console.log('Name:', req.body.name);
         console.log('Has avatar:', !!req.body.avatar);
+        console.log('Firebase UID:', req.body.firebaseUid);
         
-        const { name, email, password, avatar } = req.body;
+        const { name, email, password, avatar, firebaseUid } = req.body;
         
         // Validate required fields (password optional since Firebase handles it)
         if (!name || !email) {
@@ -21,12 +22,20 @@ exports.registerUser = async (req, res, next) => {
         }
         
         // Check if user already exists
-        const existingUser = await User.findOne({ email });
+        const existingUser = await User.findOne({ 
+            $or: [
+                { email },
+                ...(firebaseUid ? [{ firebaseUid }] : [])
+            ]
+        });
+        
         if (existingUser) {
             console.log('User already exists:', email);
-            return res.status(400).json({ 
-                success: false, 
-                message: 'User already exists with this email' 
+            return res.status(200).json({ 
+                success: true, 
+                user: existingUser,
+                token: existingUser.getJwtToken(),
+                message: 'User already registered'
             });
         }
         
@@ -63,6 +72,11 @@ exports.registerUser = async (req, res, next) => {
             email,
             avatar: avatarData
         };
+        
+        // Add Firebase UID if provided
+        if (firebaseUid) {
+            userData.firebaseUid = firebaseUid;
+        }
         
         // Only add password if provided (for password reset functionality)
         if (password) {

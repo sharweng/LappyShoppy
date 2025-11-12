@@ -13,6 +13,7 @@ const {
     createProductReview,
     getProductReviews,
     deleteReview,
+    bulkDeleteProducts,
     
     } = require('../controllers/product');
 
@@ -24,6 +25,7 @@ router.get('/admin/products', isAuthenticatedUser, authorizeRoles('admin'), getA
 
 router.put('/admin/product/:id', upload.array('images', 10), updateProduct);
 router.delete('/admin/product/:id', deleteProduct);
+router.post('/admin/products/bulk-delete', isAuthenticatedUser, authorizeRoles('admin'), bulkDeleteProducts);
 
 router.get('/products', getProducts)
 router.get('/admin/product-sales', productSales);

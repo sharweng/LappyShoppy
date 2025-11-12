@@ -3,11 +3,13 @@ import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
 import { updateProfile } from 'firebase/auth';
 import axios from 'axios';
+import AdminLayout from '../Admin/AdminLayout';
 
 const Profile = () => {
   const { currentUser, updateUserPassword } = useAuth();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
+  const [isAdmin, setIsAdmin] = useState(false);
   
   const [profileData, setProfileData] = useState({
     displayName: '',
@@ -30,6 +32,24 @@ const Profile = () => {
         email: currentUser.email || '',
         photoURL: currentUser.photoURL || ''
       });
+
+      // Check if user is admin
+      const checkAdminStatus = async () => {
+        try {
+          const token = await currentUser.getIdToken();
+          const config = {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          };
+          const { data } = await axios.get('http://localhost:4001/api/v1/me', config);
+          setIsAdmin(data.user.role === 'admin');
+        } catch (error) {
+          console.error('Error checking admin status:', error);
+        }
+      };
+
+      checkAdminStatus();
     }
   }, [currentUser]);
 
@@ -155,8 +175,8 @@ const Profile = () => {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 py-12 px-4 sm:px-6 lg:px-8">
+  const profileContent = (
+    <div className={isAdmin ? "p-4" : "min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 py-12 px-4 sm:px-6 lg:px-8"}>
       <div className="max-w-4xl mx-auto">
         <div className="bg-white rounded-xl shadow-2xl overflow-hidden">
           {/* Header */}
@@ -351,6 +371,9 @@ const Profile = () => {
       </div>
     </div>
   );
+
+  // Wrap with AdminLayout if user is admin, otherwise return content directly
+  return isAdmin ? <AdminLayout>{profileContent}</AdminLayout> : profileContent;
 };
 
 export default Profile;

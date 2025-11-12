@@ -76,7 +76,8 @@ const Register = () => {
 
     try {
       // Step 1: Create user in Firebase
-      await signup(email, password, name);
+      const userCredential = await signup(email, password, name);
+      const firebaseUser = userCredential.user;
       
       // Step 2: Also register in MongoDB backend (WITHOUT password - Firebase handles auth)
       const defaultAvatar = `data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iIzM3NTFGRiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjYwIiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9IkFyaWFsIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+JHtuYW1lLmNoYXJBdCgwKS50b1VwcGVyQ2FzZSgpfTwvdGV4dD48L3N2Zz4=`;
@@ -85,6 +86,7 @@ const Register = () => {
         await axios.post('http://localhost:4001/api/v1/register', {
           name,
           email,
+          firebaseUid: firebaseUser.uid,
           // No password - Firebase handles authentication
           avatar: defaultAvatar
         });
@@ -117,7 +119,21 @@ const Register = () => {
   const handleGoogleSignIn = async () => {
     setSocialLoading(true);
     try {
-      await signInWithGoogle();
+      const result = await signInWithGoogle();
+      const firebaseUser = result.user;
+      
+      // Register user in MongoDB
+      try {
+        await axios.post('http://localhost:4001/api/v1/register', {
+          name: firebaseUser.displayName || 'Google User',
+          email: firebaseUser.email,
+          firebaseUid: firebaseUser.uid,
+          avatar: firebaseUser.photoURL || `data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iIzM3NTFGRiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjYwIiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9IkFyaWFsIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+RzwvdGV4dD48L3N2Zz4=`
+        });
+      } catch (backendError) {
+        console.log('Backend registration (non-critical):', backendError.message);
+      }
+      
       navigate('/');
     } catch (error) {
       console.error('Google sign in error:', error);
@@ -136,7 +152,21 @@ const Register = () => {
   const handleFacebookSignIn = async () => {
     setSocialLoading(true);
     try {
-      await signInWithFacebook();
+      const result = await signInWithFacebook();
+      const firebaseUser = result.user;
+      
+      // Register user in MongoDB
+      try {
+        await axios.post('http://localhost:4001/api/v1/register', {
+          name: firebaseUser.displayName || 'Facebook User',
+          email: firebaseUser.email,
+          firebaseUid: firebaseUser.uid,
+          avatar: firebaseUser.photoURL || `data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iIzM3NTFGRiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjYwIiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9IkFyaWFsIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+RjwvdGV4dD48L3N2Zz4=`
+        });
+      } catch (backendError) {
+        console.log('Backend registration (non-critical):', backendError.message);
+      }
+      
       navigate('/');
     } catch (error) {
       console.error('Facebook sign in error:', error);

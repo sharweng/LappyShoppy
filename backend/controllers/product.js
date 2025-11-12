@@ -337,6 +337,34 @@ exports.deleteReview = async (req, res, next) => {
     })
 }
 
+exports.bulkDeleteProducts = async (req, res, next) => {
+    try {
+        const { productIds } = req.body;
+        
+        if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please provide product IDs to delete'
+            });
+        }
+
+        // Delete all products with the given IDs
+        const result = await Product.deleteMany({ _id: { $in: productIds } });
+
+        return res.status(200).json({
+            success: true,
+            message: `${result.deletedCount} products deleted successfully`,
+            deletedCount: result.deletedCount
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: 'Error deleting products',
+            error: error.message
+        });
+    }
+}
+
 
 
 

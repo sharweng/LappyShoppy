@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Link } from 'react-router-dom';
+import AdminLayout from './AdminLayout';
 import { 
   Users, 
   ShoppingBag, 
@@ -27,8 +28,13 @@ const Dashboard = () => {
 
   const fetchStats = async () => {
     try {
-      // Get token from localStorage or Firebase
-      const token = localStorage.getItem('token') || await currentUser?.getIdToken();
+      // Get token from Firebase
+      const token = await currentUser?.getIdToken();
+      
+      if (!token) {
+        console.error('No authentication token available');
+        return;
+      }
       
       const config = {
         headers: {
@@ -87,20 +93,17 @@ const Dashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+    <AdminLayout>
+      <div className="p-6 md:p-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
           <p className="mt-1 text-sm text-gray-600">
             Welcome back, {currentUser?.displayName || 'Admin'}
           </p>
         </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {statCards.map((stat, index) => (
             <div
               key={index}
@@ -144,7 +147,7 @@ const Dashboard = () => {
               <Package className="w-6 h-6 text-green-600 mr-3" />
               <div>
                 <h3 className="font-semibold text-gray-900">Manage Products</h3>
-                <p className="text-sm text-gray-600">Add and edit products</p>
+                <p className="text-sm text-gray-600">Add, edit and manage laptops</p>
               </div>
             </Link>
             <Link
@@ -177,7 +180,7 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
-    </div>
+    </AdminLayout>
   );
 };
 
