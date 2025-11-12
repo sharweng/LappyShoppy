@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Laptop, Home, ShoppingBag, LogOut } from 'lucide-react';
+import { Laptop, Home, LogOut } from 'lucide-react';
 
 const Navbar = () => {
   const { currentUser, logout } = useAuth();
@@ -33,13 +33,6 @@ const Navbar = () => {
             >
               <Home className="w-4 h-4" />
               <span>Home</span>
-            </Link>
-            <Link
-              to="/products"
-              className="text-white hover:text-blue-200 transition duration-300 font-medium flex items-center space-x-1"
-            >
-              <ShoppingBag className="w-4 h-4" />
-              <span>Products</span>
             </Link>
 
             {currentUser ? (
