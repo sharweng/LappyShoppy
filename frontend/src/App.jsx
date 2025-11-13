@@ -15,6 +15,7 @@ import ForgotPassword from './components/Auth/ForgotPassword';
 import ResetPassword from './components/Auth/ResetPassword';
 import Profile from './components/User/Profile';
 import Products from './components/Product/Products';
+import ProductDetail from './components/Product/ProductDetail';
 import Dashboard from './components/Admin/Dashboard';
 import ProductList from './components/Admin/ProductList';
 import ProductForm from './components/Admin/ProductForm';
@@ -68,6 +69,7 @@ function AppContent() {
         <Route path="/password/forgot" element={<ForgotPassword />} />
         <Route path="/password/reset/:token" element={<ResetPassword />} />
         <Route path="/products" element={<Products />} />
+        <Route path="/product/:id" element={<ProductDetail />} />
         <Route
           path="/profile"
           element={

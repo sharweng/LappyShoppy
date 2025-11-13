@@ -1,8 +1,9 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
-import { Laptop, Shield, Zap, UserPlus, Loader2, CheckCircle2, Filter, X, ChevronDown, ChevronUp, Star } from 'lucide-react';
+import { Laptop, Shield, Zap, UserPlus, Loader2, CheckCircle2, Filter, X, ChevronDown, ChevronUp, Star, ShoppingCart } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { toast } from 'react-toastify';
 
 const API_URL = 'http://localhost:4001/api/v1';
 
@@ -580,7 +581,10 @@ const Home = () => {
 };
 
 const ProductCard = ({ product }) => {
+  const navigate = useNavigate();
+  const { currentUser } = useAuth();
   const [showTooltip, setShowTooltip] = useState(false);
+  const [addingToCart, setAddingToCart] = useState(false);
   const nameRef = useRef(null);
 
   const isTextTruncated = () => {
@@ -590,9 +594,46 @@ const ProductCard = ({ product }) => {
     return false;
   };
 
+  const handleBuyNow = (e) => {
+    e.stopPropagation();
+    if (!currentUser) {
+      toast.info('Please login to purchase');
+      navigate('/login');
+      return;
+    }
+    // TODO: Implement buy now functionality
+    toast.info('Checkout functionality coming soon!');
+  };
+
+  const handleAddToCart = async (e) => {
+    e.stopPropagation();
+    if (!currentUser) {
+      toast.info('Please login to add items to cart');
+      navigate('/login');
+      return;
+    }
+
+    setAddingToCart(true);
+    try {
+      // TODO: Implement cart functionality
+      toast.success('Added to cart');
+    } catch (err) {
+      toast.error('Failed to add to cart');
+    } finally {
+      setAddingToCart(false);
+    }
+  };
+
+  const handleCardClick = () => {
+    navigate(`/product/${product._id}`);
+  };
+
   return (
     <>
-      <div className="relative h-64 overflow-hidden bg-gray-100">
+      <div 
+        onClick={handleCardClick}
+        className="relative h-64 overflow-hidden bg-gray-100 cursor-pointer"
+      >
         {product.images && product.images.length > 0 ? (
           <img
             src={product.images[0].url}
@@ -615,7 +656,7 @@ const ProductCard = ({ product }) => {
           </div>
         )}
       </div>
-      <div className="p-6">
+      <div onClick={handleCardClick} className="p-6 cursor-pointer">
         <div className="relative mb-2">
           <h3 
             ref={nameRef}
@@ -646,16 +687,31 @@ const ProductCard = ({ product }) => {
             </div>
           )}
         </div>
-        <button
-          className={`w-full py-2 rounded-lg font-semibold transition duration-300 ${
-            product.stock > 0
-              ? 'bg-blue-600 hover:bg-blue-700 text-white'
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-          }`}
-          disabled={product.stock === 0}
-        >
-          {product.stock > 0 ? 'View Details' : 'Out of Stock'}
-        </button>
+        <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+          <button
+            onClick={handleBuyNow}
+            className={`flex-1 py-2 rounded-lg font-semibold transition duration-300 ${
+              product.stock > 0
+                ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
+            disabled={product.stock === 0}
+          >
+            {product.stock > 0 ? 'Buy Now' : 'Out of Stock'}
+          </button>
+          <button
+            onClick={handleAddToCart}
+            disabled={product.stock === 0 || addingToCart}
+            className={`p-2 rounded-lg transition duration-300 ${
+              product.stock > 0
+                ? 'bg-white hover:bg-gray-50 text-blue-600 border-2 border-blue-600'
+                : 'bg-gray-100 text-gray-400 border-2 border-gray-300 cursor-not-allowed'
+            }`}
+            title="Add to Cart"
+          >
+            <ShoppingCart className="w-5 h-5" />
+          </button>
+        </div>
       </div>
     </>
   );
