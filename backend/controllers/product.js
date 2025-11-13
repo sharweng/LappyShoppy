@@ -365,6 +365,32 @@ exports.bulkDeleteProducts = async (req, res, next) => {
     }
 }
 
+exports.getFilterOptions = async (req, res, next) => {
+    try {
+        // Get unique values for each filter field
+        const brands = await Product.distinct('brand');
+        const processors = await Product.distinct('processor');
+        const screenSizes = await Product.distinct('screenSize');
+        const graphics = await Product.distinct('graphics');
+
+        return res.status(200).json({
+            success: true,
+            filters: {
+                brands: brands.sort(),
+                processors: processors.sort(),
+                screenSizes: screenSizes.sort(),
+                graphics: graphics.sort()
+            }
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: 'Error fetching filter options',
+            error: error.message
+        });
+    }
+}
+
 
 
 

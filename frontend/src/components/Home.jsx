@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
-import { Laptop, Shield, Zap, UserPlus, Loader2, CheckCircle2 } from 'lucide-react';
+import { Laptop, Shield, Zap, UserPlus, Loader2, CheckCircle2, Filter, X, ChevronDown, ChevronUp, Star } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const API_URL = 'http://localhost:4001/api/v1';
@@ -14,6 +14,51 @@ const Home = () => {
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState('');
   const observer = useRef();
+
+  // Check if any filters are active
+  const hasActiveFilters = () => {
+    return filters.category !== '' || 
+           filters.minPrice !== '' || 
+           filters.maxPrice !== '' || 
+           filters.brand !== '' || 
+           filters.processor !== '' || 
+           filters.ram !== '' || 
+           filters.storage !== '' || 
+           filters.screenSize !== '' || 
+           filters.graphics !== '' || 
+           filters.operatingSystem !== '' || 
+           filters.rating > 0;
+  };
+
+  // Filter states
+  const [showFilters, setShowFilters] = useState(false);
+  const [filterOptions, setFilterOptions] = useState({
+    brands: [],
+    processors: [],
+    screenSizes: [],
+    graphics: []
+  });
+  const [filters, setFilters] = useState({
+    category: '',
+    minPrice: '',
+    maxPrice: '',
+    brand: '',
+    processor: '',
+    ram: '',
+    storage: '',
+    screenSize: '',
+    graphics: '',
+    operatingSystem: '',
+    rating: 0
+  });
+
+  // Expandable filter sections
+  const [expandedSections, setExpandedSections] = useState({
+    price: true,
+    category: true,
+    specs: false,
+    rating: false
+  });
 
   const lastProductRef = useCallback(
     (node) => {
@@ -29,24 +74,46 @@ const Home = () => {
     [loading, hasMore]
   );
 
-  const fetchProducts = async (pageNum) => {
+  const fetchProducts = async (pageNum, resetProducts = false) => {
     try {
       setLoading(true);
       setError('');
-      const { data } = await axios.get(`${API_URL}/products?page=${pageNum}`);
+      
+      // Build query string with filters
+      const params = new URLSearchParams({ page: pageNum });
+      if (filters.category) params.append('category', filters.category);
+      if (filters.minPrice) params.append('price[gte]', filters.minPrice);
+      if (filters.maxPrice) params.append('price[lte]', filters.maxPrice);
+      if (filters.brand) params.append('brand', filters.brand);
+      if (filters.processor) params.append('processor', filters.processor);
+      if (filters.ram) params.append('ram', filters.ram);
+      if (filters.storage) params.append('storage', filters.storage);
+      if (filters.screenSize) params.append('screenSize', filters.screenSize);
+      if (filters.graphics) params.append('graphics', filters.graphics);
+      if (filters.operatingSystem) params.append('operatingSystem', filters.operatingSystem);
+      if (filters.rating > 0) params.append('ratings[gte]', filters.rating);
+
+      const { data } = await axios.get(`${API_URL}/products?${params.toString()}`);
       
       if (data.products.length === 0) {
         setHasMore(false);
+        if (resetProducts) {
+          setProducts([]);
+        }
       } else {
-        setProducts((prevProducts) => {
-          const newProducts = data.products.filter(
-            (newProduct) => !prevProducts.some((p) => p._id === newProduct._id)
-          );
-          return [...prevProducts, ...newProducts];
-        });
+        if (resetProducts) {
+          setProducts(data.products);
+        } else {
+          setProducts((prevProducts) => {
+            const newProducts = data.products.filter(
+              (newProduct) => !prevProducts.some((p) => p._id === newProduct._id)
+            );
+            return [...prevProducts, ...newProducts];
+          });
+        }
         
         // Check if we've loaded all products
-        const totalLoaded = products.length + data.products.length;
+        const totalLoaded = resetProducts ? data.products.length : products.length + data.products.length;
         if (totalLoaded >= data.productsCount) {
           setHasMore(false);
         }
@@ -59,14 +126,68 @@ const Home = () => {
     }
   };
 
+  const handleFilterChange = (filterName, value) => {
+    setFilters(prev => {
+      const newFilters = { ...prev, [filterName]: value };
+      // Reset products when filter changes
+      setProducts([]);
+      setHasMore(true);
+      return newFilters;
+    });
+    // Reset to page 1 when filter changes
+    setPage(1);
+  };
+
+  const clearFilters = () => {
+    const clearedFilters = {
+      category: '',
+      minPrice: '',
+      maxPrice: '',
+      brand: '',
+      processor: '',
+      ram: '',
+      storage: '',
+      screenSize: '',
+      graphics: '',
+      operatingSystem: '',
+      rating: 0
+    };
+    setFilters(clearedFilters);
+    setProducts([]);
+    setPage(1);
+    setHasMore(true);
+  };
+
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
+
+  // Fetch filter options on mount
   useEffect(() => {
-    fetchProducts(page);
-  }, [page]);
+    const fetchFilterOptions = async () => {
+      try {
+        const { data } = await axios.get(`${API_URL}/products/filter-options`);
+        setFilterOptions(data.filters);
+      } catch (error) {
+        console.error('Error fetching filter options:', error);
+      }
+    };
+    fetchFilterOptions();
+  }, []);
+
+  // Fetch products when page changes
+  useEffect(() => {
+    if (page > 1) {
+      fetchProducts(page, false);
+    } else {
+      fetchProducts(1, true);
+    }
+  }, [page, JSON.stringify(filters)]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex flex-col">
       {/* Hero Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex-grow">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="text-center">
           <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4">
             Welcome to{' '}
@@ -96,26 +217,306 @@ const Home = () => {
             )}
           </div>
         </div>
+      </div>
 
-        {/* Products Section */}
-        <div id="products" className="mt-16">
-          <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">
+      {/* Products Section */}
+      <div id="products" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 flex-grow w-full">
+        <div className="flex justify-between items-center mb-8">
+          <h2 className="text-3xl font-bold text-gray-900">
             Our Premium Laptops
           </h2>
-          
-          {error ? (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
-              <p className="text-red-600">{error}</p>
-            </div>
-          ) : products.length === 0 && !loading ? (
-            <div className="bg-white rounded-xl shadow-lg p-12 text-center">
-              <Laptop className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600 text-lg">No products available at the moment.</p>
-              <p className="text-gray-500 text-sm mt-2">Check back later for new arrivals!</p>
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="flex items-center space-x-2 bg-white text-gray-700 px-4 py-2 rounded-lg border-2 border-gray-300 hover:border-blue-600 transition duration-300"
+          >
+            <Filter className="w-5 h-5" />
+            <span className="font-medium">{showFilters ? 'Hide Filters' : 'Show Filters'}</span>
+          </button>
+        </div>
+
+        <div className="flex gap-6">
+            {/* Filters Sidebar */}
+            {showFilters && (
+              <div className="w-72 flex-shrink-0 bg-white rounded-xl shadow-lg h-fit sticky top-20">
+                <div className="flex justify-between items-center p-4 border-b">
+                  <h3 className="text-lg font-bold text-gray-900">Filters</h3>
+                  <button
+                    onClick={() => setShowFilters(false)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="overflow-y-auto max-h-[calc(100vh-240px)] p-4">
+                  {/* Price Filter */}
+                  <div className="mb-4 border-b pb-3">
+                    <button
+                      onClick={() => toggleSection('price')}
+                      className="flex justify-between items-center w-full mb-2"
+                    >
+                      <h4 className="font-semibold text-sm text-gray-900">Price Range</h4>
+                      {expandedSections.price ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </button>
+                    {expandedSections.price && (
+                      <div className="space-y-2">
+                        <input
+                          type="number"
+                          value={filters.minPrice}
+                          onChange={(e) => handleFilterChange('minPrice', e.target.value)}
+                          placeholder="Min (₱)"
+                          className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                        />
+                        <input
+                          type="number"
+                          value={filters.maxPrice}
+                          onChange={(e) => handleFilterChange('maxPrice', e.target.value)}
+                          placeholder="Max (₱)"
+                          className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Category Filter */}
+                  <div className="mb-4 border-b pb-3">
+                    <button
+                      onClick={() => toggleSection('category')}
+                      className="flex justify-between items-center w-full mb-2"
+                    >
+                      <h4 className="font-semibold text-sm text-gray-900">Category</h4>
+                      {expandedSections.category ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </button>
+                    {expandedSections.category && (
+                      <div className="space-y-1.5">
+                        {['Business Laptop', 'Gaming Laptop', 'Chromebooks', 'Convertible Laptops'].map((cat) => (
+                          <label key={cat} className="flex items-center space-x-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="category"
+                              checked={filters.category === cat}
+                              onChange={() => handleFilterChange('category', cat)}
+                              className="text-blue-600 focus:ring-blue-500 w-3.5 h-3.5"
+                            />
+                            <span className="text-xs text-gray-700">{cat}</span>
+                          </label>
+                        ))}
+                        <label className="flex items-center space-x-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="category"
+                            checked={filters.category === ''}
+                            onChange={() => handleFilterChange('category', '')}
+                            className="text-blue-600 focus:ring-blue-500 w-3.5 h-3.5"
+                          />
+                          <span className="text-xs text-gray-700">All</span>
+                        </label>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Specs Filter */}
+                  <div className="mb-4 border-b pb-3">
+                    <button
+                      onClick={() => toggleSection('specs')}
+                      className="flex justify-between items-center w-full mb-2"
+                    >
+                      <h4 className="font-semibold text-sm text-gray-900">Specifications</h4>
+                      {expandedSections.specs ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </button>
+                    {expandedSections.specs && (
+                      <div className="space-y-2.5">
+                        {/* Brand */}
+                        <div>
+                          <label className="text-xs text-gray-600 font-medium">Brand</label>
+                          <select
+                            value={filters.brand}
+                            onChange={(e) => handleFilterChange('brand', e.target.value)}
+                            className="w-full mt-1 px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                          >
+                            <option value="">All Brands</option>
+                            {filterOptions.brands.map((brand) => (
+                              <option key={brand} value={brand}>{brand}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Processor */}
+                        <div>
+                          <label className="text-xs text-gray-600 font-medium">Processor</label>
+                          <select
+                            value={filters.processor}
+                            onChange={(e) => handleFilterChange('processor', e.target.value)}
+                            className="w-full mt-1 px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                          >
+                            <option value="">All Processors</option>
+                            {filterOptions.processors.map((processor) => (
+                              <option key={processor} value={processor}>{processor}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* RAM */}
+                        <div>
+                          <label className="text-xs text-gray-600 font-medium">RAM</label>
+                          <select
+                            value={filters.ram}
+                            onChange={(e) => handleFilterChange('ram', e.target.value)}
+                            className="w-full mt-1 px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                          >
+                            <option value="">All RAM</option>
+                            <option value="4GB">4GB</option>
+                            <option value="8GB">8GB</option>
+                            <option value="16GB">16GB</option>
+                            <option value="32GB">32GB</option>
+                          </select>
+                        </div>
+
+                        {/* Storage */}
+                        <div>
+                          <label className="text-xs text-gray-600 font-medium">Storage</label>
+                          <select
+                            value={filters.storage}
+                            onChange={(e) => handleFilterChange('storage', e.target.value)}
+                            className="w-full mt-1 px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                          >
+                            <option value="">All Storage</option>
+                            <option value="64GB">64GB</option>
+                            <option value="128GB">128GB</option>
+                            <option value="256GB">256GB</option>
+                            <option value="512GB">512GB</option>
+                            <option value="1TB">1TB</option>
+                            <option value="2TB">2TB</option>
+                          </select>
+                        </div>
+
+                        {/* Screen Size */}
+                        <div>
+                          <label className="text-xs text-gray-600 font-medium">Screen Size</label>
+                          <select
+                            value={filters.screenSize}
+                            onChange={(e) => handleFilterChange('screenSize', e.target.value)}
+                            className="w-full mt-1 px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                          >
+                            <option value="">All Sizes</option>
+                            {filterOptions.screenSizes.map((size) => (
+                              <option key={size} value={size}>{size}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Graphics */}
+                        <div>
+                          <label className="text-xs text-gray-600 font-medium">Graphics</label>
+                          <select
+                            value={filters.graphics}
+                            onChange={(e) => handleFilterChange('graphics', e.target.value)}
+                            className="w-full mt-1 px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                          >
+                            <option value="">All Graphics</option>
+                            {filterOptions.graphics.map((graphic) => (
+                              <option key={graphic} value={graphic}>{graphic}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Operating System */}
+                        <div>
+                          <label className="text-xs text-gray-600 font-medium">Operating System</label>
+                          <select
+                            value={filters.operatingSystem}
+                            onChange={(e) => handleFilterChange('operatingSystem', e.target.value)}
+                            className="w-full mt-1 px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                          >
+                            <option value="">All OS</option>
+                            <option value="Windows 11 Home">Windows 11 Home</option>
+                            <option value="Windows 11 Pro">Windows 11 Pro</option>
+                            <option value="macOS Sonoma">macOS Sonoma</option>
+                            <option value="macOS Ventura">macOS Ventura</option>
+                            <option value="Chrome OS">Chrome OS</option>
+                          </select>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Rating Filter */}
+                  <div className="mb-4">
+                    <button
+                      onClick={() => toggleSection('rating')}
+                      className="flex justify-between items-center w-full mb-2"
+                    >
+                      <h4 className="font-semibold text-sm text-gray-900">Min Rating</h4>
+                      {expandedSections.rating ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </button>
+                    {expandedSections.rating && (
+                      <div className="space-y-1.5">
+                        {[4, 3, 2, 1].map((rating) => (
+                          <label key={rating} className="flex items-center space-x-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="rating"
+                              checked={filters.rating === rating}
+                              onChange={() => handleFilterChange('rating', rating)}
+                              className="text-blue-600 focus:ring-blue-500 w-3.5 h-3.5"
+                            />
+                            <div className="flex items-center">
+                              {[...Array(rating)].map((_, i) => (
+                                <Star key={i} className="w-3 h-3 fill-yellow-500 text-yellow-500" />
+                              ))}
+                              <span className="text-xs text-gray-700 ml-1">& up</span>
+                            </div>
+                          </label>
+                        ))}
+                        <label className="flex items-center space-x-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="rating"
+                            checked={filters.rating === 0}
+                            onChange={() => handleFilterChange('rating', 0)}
+                            className="text-blue-600 focus:ring-blue-500 w-3.5 h-3.5"
+                          />
+                          <span className="text-xs text-gray-700">All</span>
+                        </label>
+                        <p className="text-[10px] text-gray-500 italic mt-1">
+                          * Coming soon
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Filter Actions - Sticky at bottom */}
+                <div className="border-t p-3">
+                  <button
+                    onClick={clearFilters}
+                    className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded-lg font-semibold text-sm transition duration-300"
+                  >
+                    Clear All Filters
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Products Grid */}
+            <div className="flex-1 min-w-0">
+              {error ? (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+                  <p className="text-red-600">{error}</p>
+                </div>
+              ) : products.length === 0 && !loading ? (
+                <div className={`grid ${showFilters ? 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-3' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'} gap-6`}>
+                  <div className={`${showFilters ? 'lg:col-span-2 xl:col-span-3' : 'md:col-span-2 lg:col-span-3 xl:col-span-4'}`}>
+                    <div className="bg-white rounded-xl shadow-lg p-12 text-center">
+                      <Laptop className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-600 text-lg">No products available at the moment.</p>
+                      <p className="text-gray-500 text-sm mt-2">Check back later for new arrivals!</p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className={`grid ${showFilters ? 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-3' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'} gap-6`}>
                 {products.map((product, index) => {
                   if (products.length === index + 1) {
                     return (
@@ -137,42 +538,43 @@ const Home = () => {
                       </div>
                     );
                   }
-                })}
-              </div>
-
-              {loading && (
-                <div className="flex flex-col items-center justify-center py-12">
-                  <div className="relative">
-                    <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-                    <Loader2 className="w-8 h-8 text-blue-600 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
+                    })}
                   </div>
-                  <p className="mt-4 text-gray-600 font-medium">Loading more products...</p>
-                  <p className="text-sm text-gray-500 mt-1">Discovering amazing laptops for you</p>
-                </div>
-              )}
 
-              {!hasMore && products.length > 0 && (
-                <div className="text-center py-12">
-                  <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
-                    <CheckCircle2 className="w-8 h-8 text-green-600" />
-                  </div>
-                  <p className="text-gray-700 font-semibold text-lg mb-2">You've reached the end of our catalog!</p>
-                  <p className="text-gray-500 text-sm">You've seen all {products.length} amazing laptops we have in store.</p>
-                  <button
-                    onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                    className="mt-4 text-blue-600 hover:text-blue-700 font-medium inline-flex items-center"
-                  >
-                    <span>Back to top</span>
-                    <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
-                    </svg>
-                  </button>
-                </div>
+                      {loading && (
+                    <div className="flex flex-col items-center justify-center py-12">
+                      <div className="relative">
+                        <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+                        <Loader2 className="w-8 h-8 text-blue-600 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
+                      </div>
+                      <p className="mt-4 text-gray-600 font-medium">Loading more products...</p>
+                      <p className="text-sm text-gray-500 mt-1">Discovering amazing laptops for you</p>
+                    </div>
+                  )}
+
+                      {!hasMore && products.length > 0 && !hasActiveFilters() && (
+                    <div className="text-center py-12">
+                      <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
+                        <CheckCircle2 className="w-8 h-8 text-green-600" />
+                      </div>
+                      <p className="text-gray-700 font-semibold text-lg mb-2">You've reached the end of our catalog!</p>
+                      <p className="text-gray-500 text-sm">You've seen all {products.length} amazing laptops we have in store.</p>
+                      <button
+                        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                        className="mt-4 text-blue-600 hover:text-blue-700 font-medium inline-flex items-center"
+                      >
+                        <span>Back to top</span>
+                        <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                        </svg>
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
-            </>
-          )}
+            </div>
+          </div>
         </div>
-      </div>
     </div>
   );
 };

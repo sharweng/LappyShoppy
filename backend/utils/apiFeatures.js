@@ -26,28 +26,39 @@ class APIFeatures {
         const removeFields = ['keyword',  'page']
         removeFields.forEach(el => delete queryCopy[el]);
 
-        let priceFilter = {};
+        let filterQuery = {};
+        
+        // Handle price filter
         if (queryCopy['price[gte]'] || queryCopy['price[lte]']) {
-            priceFilter.price = {};
+            filterQuery.price = {};
             if (queryCopy['price[gte]']) {
-                priceFilter.price.$gte = Number(queryCopy['price[gte]']);
+                filterQuery.price.$gte = Number(queryCopy['price[gte]']);
             }
             if (queryCopy['price[lte]']) {
-                priceFilter.price.$lte = Number(queryCopy['price[lte]']);
+                filterQuery.price.$lte = Number(queryCopy['price[lte]']);
             }
-// priceFilter {
-//     price: {
-//         $gte: 100,
-//         $lte: 1000
-//     }
-// }
             delete queryCopy['price[gte]'];
             delete queryCopy['price[lte]'];
         }
 
-        console.log(queryCopy);
+        // Handle other filters (exact match)
+        const filterableFields = ['category', 'brand', 'processor', 'ram', 'storage', 'screenSize', 'graphics', 'operatingSystem'];
+        filterableFields.forEach(field => {
+            if (queryCopy[field]) {
+                filterQuery[field] = queryCopy[field];
+                delete queryCopy[field];
+            }
+        });
 
-        this.query = this.query.find(priceFilter);
+        // Handle rating filter
+        if (queryCopy['ratings[gte]']) {
+            filterQuery.ratings = { $gte: Number(queryCopy['ratings[gte]']) };
+            delete queryCopy['ratings[gte]'];
+        }
+
+        console.log('Filter Query:', filterQuery);
+
+        this.query = this.query.find(filterQuery);
         return this;
     }
 

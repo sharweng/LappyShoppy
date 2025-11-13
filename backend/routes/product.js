@@ -14,6 +14,7 @@ const {
     getProductReviews,
     deleteReview,
     bulkDeleteProducts,
+    getFilterOptions,
     
     } = require('../controllers/product');
 
@@ -28,6 +29,7 @@ router.delete('/admin/product/:id', deleteProduct);
 router.post('/admin/products/bulk-delete', isAuthenticatedUser, authorizeRoles('admin'), bulkDeleteProducts);
 
 router.get('/products', getProducts)
+router.get('/products/filter-options', getFilterOptions);
 router.get('/admin/product-sales', productSales);
 router.put('/review', isAuthenticatedUser, createProductReview);
 router.get('/reviews',isAuthenticatedUser, getProductReviews)
