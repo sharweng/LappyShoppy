@@ -7,6 +7,7 @@ import axios from 'axios';
 
 // Components
 import Navbar from './components/Layout/Navbar';
+import Footer from './components/Layout/Footer';
 import Home from './components/Home';
 import Register from './components/Auth/Register';
 import Login from './components/Auth/Login';
@@ -54,11 +55,13 @@ function AppContent() {
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isProfilePage = location.pathname === '/profile';
   const shouldHideNavbar = isAdminRoute || (isProfilePage && isAdmin);
+  const shouldShowFooter = !isAdminRoute && !(isProfilePage && isAdmin);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       {!shouldHideNavbar && <Navbar />}
-      <Routes>
+      <div className="flex-grow">
+        <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
@@ -106,6 +109,8 @@ function AppContent() {
           }
         />
       </Routes>
+      </div>
+      {shouldShowFooter && <Footer />}
       <ToastContainer
         position="top-right"
         autoClose={3000}
