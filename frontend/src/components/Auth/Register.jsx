@@ -19,7 +19,7 @@ const Register = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState(false);
-  const { signup, signInWithGoogle, signInWithFacebook } = useAuth();
+  const { signup, signInWithGoogle, signInWithFacebook, logout } = useAuth();
   const navigate = useNavigate();
 
   const { name, email, password, confirmPassword } = formData;
@@ -122,19 +122,57 @@ const Register = () => {
       const result = await signInWithGoogle();
       const firebaseUser = result.user;
       
-      // Register user in MongoDB
+      console.log('Google user data:', {
+        displayName: firebaseUser.displayName,
+        email: firebaseUser.email,
+        photoURL: firebaseUser.photoURL,
+        uid: firebaseUser.uid
+      });
+      
+      // Get Firebase token
+      const token = await firebaseUser.getIdToken();
+      
+      // Check if user already exists in backend
       try {
-        await axios.post('http://localhost:4001/api/v1/register', {
-          name: firebaseUser.displayName || 'Google User',
-          email: firebaseUser.email,
-          firebaseUid: firebaseUser.uid,
-          avatar: firebaseUser.photoURL || `data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iIzM3NTFGRiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjYwIiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9IkFyaWFsIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+RzwvdGV4dD48L3N2Zz4=`
+        const checkResponse = await fetch('http://localhost:4001/api/v1/me', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
         });
-      } catch (backendError) {
-        console.log('Backend registration (non-critical):', backendError.message);
+        
+        if (checkResponse.ok) {
+          // User already exists, just navigate
+          toast.success('Signed in with Google successfully!');
+          navigate('/');
+          return;
+        }
+      } catch (error) {
+        // User doesn't exist, proceed with registration
       }
       
-      navigate('/');
+      // Register user in MongoDB
+      try {
+        const registrationData = {
+          name: firebaseUser.displayName || 'Google User',
+          firebaseUid: firebaseUser.uid,
+          avatar: firebaseUser.photoURL || `data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iIzM3NTFGRiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjYwIiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9IkFyaWFsIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+RzwvdGV4dD48L3N2Zz4=`
+        };
+        
+        // Add email if available
+        if (firebaseUser.email) {
+          registrationData.email = firebaseUser.email;
+        }
+        
+        console.log('Sending registration data:', registrationData);
+        
+        await axios.post('http://localhost:4001/api/v1/register', registrationData);
+        toast.success('Registration successful!');
+        navigate('/');
+      } catch (backendError) {
+        console.error('Backend registration failed:', backendError);
+        console.error('Error response:', backendError.response?.data);
+        toast.error('Failed to complete registration. Please try again.');
+      }
     } catch (error) {
       console.error('Google sign in error:', error);
       if (error.code === 'auth/popup-closed-by-user') {
@@ -155,19 +193,57 @@ const Register = () => {
       const result = await signInWithFacebook();
       const firebaseUser = result.user;
       
-      // Register user in MongoDB
+      console.log('Facebook user data:', {
+        displayName: firebaseUser.displayName,
+        email: firebaseUser.email,
+        photoURL: firebaseUser.photoURL,
+        uid: firebaseUser.uid
+      });
+      
+      // Get Firebase token
+      const token = await firebaseUser.getIdToken();
+      
+      // Check if user already exists in backend
       try {
-        await axios.post('http://localhost:4001/api/v1/register', {
-          name: firebaseUser.displayName || 'Facebook User',
-          email: firebaseUser.email,
-          firebaseUid: firebaseUser.uid,
-          avatar: firebaseUser.photoURL || `data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iIzM3NTFGRiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjYwIiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9IkFyaWFsIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+RjwvdGV4dD48L3N2Zz4=`
+        const checkResponse = await fetch('http://localhost:4001/api/v1/me', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
         });
-      } catch (backendError) {
-        console.log('Backend registration (non-critical):', backendError.message);
+        
+        if (checkResponse.ok) {
+          // User already exists, just navigate
+          toast.success('Signed in with Facebook successfully!');
+          navigate('/');
+          return;
+        }
+      } catch (error) {
+        // User doesn't exist, proceed with registration
       }
       
-      navigate('/');
+      // Register user in MongoDB
+      try {
+        const registrationData = {
+          name: firebaseUser.displayName || 'Facebook User',
+          firebaseUid: firebaseUser.uid,
+          avatar: firebaseUser.photoURL || `data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iIzM3NTFGRiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjYwIiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9IkFyaWFsIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+RjwvdGV4dD48L3N2Zz4=`
+        };
+        
+        // Add email if available
+        if (firebaseUser.email) {
+          registrationData.email = firebaseUser.email;
+        }
+        
+        console.log('Sending registration data:', registrationData);
+        
+        await axios.post('http://localhost:4001/api/v1/register', registrationData);
+        toast.success('Registration successful!');
+        navigate('/');
+      } catch (backendError) {
+        console.error('Backend registration failed:', backendError);
+        console.error('Error response:', backendError.response?.data);
+        toast.error('Failed to complete registration. Please try again.');
+      }
     } catch (error) {
       console.error('Facebook sign in error:', error);
       if (error.code === 'auth/popup-closed-by-user') {

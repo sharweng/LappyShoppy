@@ -54,8 +54,11 @@ export const AuthProvider = ({ children }) => {
   const signInWithGoogle = async () => {
     try {
       const provider = new GoogleAuthProvider();
+      // Request email and profile scopes
+      provider.addScope('email');
+      provider.addScope('profile');
       const result = await signInWithPopup(auth, provider);
-      toast.success('Signed in with Google successfully!');
+      // Don't show toast here - let the calling component handle it
       return result;
     } catch (error) {
       console.error('Google sign in error:', error);
@@ -67,8 +70,11 @@ export const AuthProvider = ({ children }) => {
   const signInWithFacebook = async () => {
     try {
       const provider = new FacebookAuthProvider();
+      // Request email and public profile scopes
+      provider.addScope('email');
+      provider.addScope('public_profile');
       const result = await signInWithPopup(auth, provider);
-      toast.success('Signed in with Facebook successfully!');
+      // Don't show toast here - let the calling component handle it
       return result;
     } catch (error) {
       console.error('Facebook sign in error:', error);
@@ -77,14 +83,18 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Firebase logout
-  const logout = async () => {
+  const logout = async (showToast = true) => {
     try {
       await signOut(auth);
       setUserProfile(null);
       localStorage.removeItem('token');
-      toast.success('Logged out successfully');
+      if (showToast) {
+        toast.success('Logged out successfully');
+      }
     } catch (error) {
-      toast.error('Error logging out');
+      if (showToast) {
+        toast.error('Error logging out');
+      }
       throw error;
     }
   };

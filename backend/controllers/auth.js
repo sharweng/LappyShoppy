@@ -13,20 +13,28 @@ exports.registerUser = async (req, res, next) => {
         
         const { name, email, password, avatar, firebaseUid } = req.body;
         
-        // Validate required fields (password optional since Firebase handles it)
-        if (!name || !email) {
+        // Validate required fields
+        if (!name) {
             return res.status(400).json({ 
                 success: false, 
-                message: 'Please provide name and email' 
+                message: 'Please provide a name' 
+            });
+        }
+        
+        // For Firebase users, firebaseUid is required. For email/password users, email and password are required
+        if (!firebaseUid && (!email || !password)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Please provide email and password, or use social login' 
             });
         }
         
         // Check if user already exists
         const existingUser = await User.findOne({ 
             $or: [
-                { email },
+                ...(email ? [{ email }] : []),
                 ...(firebaseUid ? [{ firebaseUid }] : [])
-            ]
+            ].filter(condition => Object.keys(condition).length > 0)
         });
         
         if (existingUser) {
@@ -69,9 +77,13 @@ exports.registerUser = async (req, res, next) => {
         console.log('Creating user in MongoDB...');
         const userData = {
             name,
-            email,
             avatar: avatarData
         };
+        
+        // Add email if provided
+        if (email) {
+            userData.email = email;
+        }
         
         // Add Firebase UID if provided
         if (firebaseUid) {

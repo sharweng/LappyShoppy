@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { Laptop, Home, LogOut, ShoppingCart, Package } from 'lucide-react';
@@ -7,7 +7,12 @@ const Navbar = () => {
   const { currentUser, logout } = useAuth();
   const { getCartCount } = useCart();
   const navigate = useNavigate();
+  const location = useLocation();
   const cartCount = getCartCount();
+
+  // Treat user as not logged in on auth pages
+  const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
+  const displayUser = isAuthPage ? null : currentUser;
 
   const handleLogout = async () => {
     try {
@@ -38,7 +43,7 @@ const Navbar = () => {
               <span>Home</span>
             </Link>
 
-            {currentUser && (
+            {displayUser && (
               <>
                 <Link
                   to="/orders"
@@ -62,25 +67,25 @@ const Navbar = () => {
               </>
             )}
 
-            {currentUser ? (
+            {displayUser ? (
               <>
                 <Link
                   to="/profile"
                   className="flex items-center space-x-2 text-white hover:text-blue-200 transition duration-300"
                 >
-                  {currentUser.photoURL ? (
+                  {displayUser.photoURL ? (
                     <img 
-                      src={currentUser.photoURL} 
+                      src={displayUser.photoURL} 
                       alt="Profile" 
                       className="w-8 h-8 rounded-full object-cover border-2 border-white"
                     />
                   ) : (
                     <div className="w-8 h-8 bg-blue-400 rounded-full flex items-center justify-center text-white font-semibold border-2 border-white">
-                      {currentUser.displayName?.charAt(0).toUpperCase() || currentUser.email?.charAt(0).toUpperCase()}
+                      {displayUser.displayName?.charAt(0).toUpperCase() || displayUser.email?.charAt(0).toUpperCase()}
                     </div>
                   )}
                   <span className="text-sm font-medium">
-                    {currentUser.displayName?.split(' ')[0] || currentUser.email?.split('@')[0]}
+                    {displayUser.displayName?.split(' ')[0] || displayUser.email?.split('@')[0]}
                   </span>
                 </Link>
                 <button

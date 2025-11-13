@@ -15,7 +15,7 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState(false);
-  const { login, signInWithGoogle, signInWithFacebook } = useAuth();
+  const { login, signInWithGoogle, signInWithFacebook, logout } = useAuth();
   const navigate = useNavigate();
 
   const { email, password } = formData;
@@ -91,8 +91,52 @@ const Login = () => {
   const handleGoogleSignIn = async () => {
     setSocialLoading(true);
     try {
-      await signInWithGoogle();
-      navigate('/');
+      const result = await signInWithGoogle();
+      const firebaseUser = result.user;
+      
+      // Get Firebase token
+      const token = await firebaseUser.getIdToken();
+      
+      // Check if user exists in backend
+      try {
+        const checkResponse = await fetch('http://localhost:4001/api/v1/me', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (checkResponse.ok) {
+          // User exists, proceed to home
+          toast.success('Signed in with Google successfully!');
+          navigate('/');
+          return;
+        }
+      } catch (error) {
+        // User doesn't exist, proceed with registration
+      }
+      
+      // User doesn't exist, register them automatically
+      try {
+        const registrationData = {
+          name: firebaseUser.displayName || 'Google User',
+          firebaseUid: firebaseUser.uid,
+          avatar: firebaseUser.photoURL || `data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iIzM3NTFGRiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjYwIiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9IkFyaWFsIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+RzwvdGV4dD48L3N2Zz4=`
+        };
+        
+        // Add email if available
+        if (firebaseUser.email) {
+          registrationData.email = firebaseUser.email;
+        }
+        
+        const axios = (await import('axios')).default;
+        await axios.post('http://localhost:4001/api/v1/register', registrationData);
+        toast.success('Account created and signed in successfully!');
+        navigate('/');
+      } catch (backendError) {
+        console.error('Backend registration failed:', backendError);
+        await logout(false);
+        toast.error('Failed to complete sign in. Please try again.');
+      }
     } catch (error) {
       console.error('Google sign in error:', error);
       if (error.code === 'auth/popup-closed-by-user') {
@@ -110,8 +154,52 @@ const Login = () => {
   const handleFacebookSignIn = async () => {
     setSocialLoading(true);
     try {
-      await signInWithFacebook();
-      navigate('/');
+      const result = await signInWithFacebook();
+      const firebaseUser = result.user;
+      
+      // Get Firebase token
+      const token = await firebaseUser.getIdToken();
+      
+      // Check if user exists in backend
+      try {
+        const checkResponse = await fetch('http://localhost:4001/api/v1/me', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (checkResponse.ok) {
+          // User exists, proceed to home
+          toast.success('Signed in with Facebook successfully!');
+          navigate('/');
+          return;
+        }
+      } catch (error) {
+        // User doesn't exist, proceed with registration
+      }
+      
+      // User doesn't exist, register them automatically
+      try {
+        const registrationData = {
+          name: firebaseUser.displayName || 'Facebook User',
+          firebaseUid: firebaseUser.uid,
+          avatar: firebaseUser.photoURL || `data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iIzM3NTFGRiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjYwIiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9IkFyaWFsIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+RjwvdGV4dD48L3N2Zz4=`
+        };
+        
+        // Add email if available
+        if (firebaseUser.email) {
+          registrationData.email = firebaseUser.email;
+        }
+        
+        const axios = (await import('axios')).default;
+        await axios.post('http://localhost:4001/api/v1/register', registrationData);
+        toast.success('Account created and signed in successfully!');
+        navigate('/');
+      } catch (backendError) {
+        console.error('Backend registration failed:', backendError);
+        await logout(false);
+        toast.error('Failed to complete sign in. Please try again.');
+      }
     } catch (error) {
       console.error('Facebook sign in error:', error);
       if (error.code === 'auth/popup-closed-by-user') {

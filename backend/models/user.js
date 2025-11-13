@@ -12,9 +12,16 @@ const userSchema = new mongoose.Schema({
     },
     email: {
         type: String,
-        required: [true, 'Please enter your email'],
+        required: false, // Optional since Firebase handles auth
         unique: true,
-        validate: [validator.isEmail, 'Please enter valid email address']
+        sparse: true, // Allow null values but enforce uniqueness when present
+        validate: {
+            validator: function(v) {
+                // Only validate if email is provided
+                return !v || validator.isEmail(v);
+            },
+            message: 'Please enter valid email address'
+        }
     },
     firebaseUid: {
         type: String,
