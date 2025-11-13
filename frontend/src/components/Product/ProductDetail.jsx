@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useCart } from '../../context/CartContext';
 import axios from 'axios';
 import { 
   Laptop, 
@@ -27,6 +28,7 @@ const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { currentUser } = useAuth();
+  const { addToCart } = useCart();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -70,7 +72,9 @@ const ProductDetail = () => {
 
     setAddingToCart(true);
     try {
-      // TODO: Implement cart functionality
+      for (let i = 0; i < quantity; i++) {
+        addToCart(product);
+      }
       toast.success(`Added ${quantity} ${quantity > 1 ? 'items' : 'item'} to cart`);
     } catch (err) {
       toast.error('Failed to add to cart');
@@ -86,8 +90,11 @@ const ProductDetail = () => {
       return;
     }
 
-    // TODO: Implement buy now functionality (redirect to checkout)
-    toast.info('Checkout functionality coming soon!');
+    // Add to cart and redirect to cart
+    for (let i = 0; i < quantity; i++) {
+      addToCart(product);
+    }
+    navigate('/cart');
   };
 
   const nextImage = () => {

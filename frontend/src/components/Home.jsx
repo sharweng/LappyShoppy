@@ -3,12 +3,14 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import { Laptop, Shield, Zap, UserPlus, Loader2, CheckCircle2, Filter, X, ChevronDown, ChevronUp, Star, ShoppingCart } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 import { toast } from 'react-toastify';
 
 const API_URL = 'http://localhost:4001/api/v1';
 
 const Home = () => {
   const { currentUser } = useAuth();
+  const { addToCart } = useCart();
   const [products, setProducts] = useState([]);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -583,6 +585,7 @@ const Home = () => {
 const ProductCard = ({ product }) => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
+  const { addToCart } = useCart();
   const [showTooltip, setShowTooltip] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
   const nameRef = useRef(null);
@@ -601,11 +604,12 @@ const ProductCard = ({ product }) => {
       navigate('/login');
       return;
     }
-    // TODO: Implement buy now functionality
-    toast.info('Checkout functionality coming soon!');
+    // Add to cart and go to cart
+    addToCart(product);
+    navigate('/cart');
   };
 
-  const handleAddToCart = async (e) => {
+  const handleAddToCart = (e) => {
     e.stopPropagation();
     if (!currentUser) {
       toast.info('Please login to add items to cart');
@@ -613,14 +617,11 @@ const ProductCard = ({ product }) => {
       return;
     }
 
-    setAddingToCart(true);
     try {
-      // TODO: Implement cart functionality
+      addToCart(product);
       toast.success('Added to cart');
     } catch (err) {
       toast.error('Failed to add to cart');
-    } finally {
-      setAddingToCart(false);
     }
   };
 

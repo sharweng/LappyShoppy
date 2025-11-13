@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { CartProvider } from './context/CartContext';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useState, useEffect } from 'react';
@@ -14,6 +15,10 @@ import Login from './components/Auth/Login';
 import ForgotPassword from './components/Auth/ForgotPassword';
 import ResetPassword from './components/Auth/ResetPassword';
 import Profile from './components/User/Profile';
+import Cart from './components/User/Cart';
+import Checkout from './components/User/Checkout';
+import MyOrders from './components/User/MyOrders';
+import OrderDetail from './components/User/OrderDetail';
 import Products from './components/Product/Products';
 import ProductDetail from './components/Product/ProductDetail';
 import Dashboard from './components/Admin/Dashboard';
@@ -70,6 +75,38 @@ function AppContent() {
         <Route path="/password/reset/:token" element={<ResetPassword />} />
         <Route path="/products" element={<Products />} />
         <Route path="/product/:id" element={<ProductDetail />} />
+        <Route
+          path="/cart"
+          element={
+            <ProtectedRoute>
+              <Cart />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/checkout"
+          element={
+            <ProtectedRoute>
+              <Checkout />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/orders"
+          element={
+            <ProtectedRoute>
+              <MyOrders />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/order/:id"
+          element={
+            <ProtectedRoute>
+              <OrderDetail />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/profile"
           element={
@@ -133,7 +170,9 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <AppContent />
+        <CartProvider>
+          <AppContent />
+        </CartProvider>
       </AuthProvider>
     </Router>
   );

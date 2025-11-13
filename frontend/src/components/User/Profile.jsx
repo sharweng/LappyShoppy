@@ -234,70 +234,76 @@ const Profile = () => {
           <div className="p-6">
             {activeTab === 'profile' && (
               <form onSubmit={handleProfileSubmit} className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Profile Photo
-                  </label>
-                  <div className="flex items-center space-x-4">
-                    <div className="flex-shrink-0">
-                      {previewImage || profileData.photoURL ? (
-                        <img
-                          src={previewImage || profileData.photoURL}
-                          alt="Preview"
-                          className="w-20 h-20 rounded-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-20 h-20 bg-gray-300 rounded-full flex items-center justify-center text-gray-600 text-2xl font-bold">
-                          {currentUser?.displayName?.charAt(0).toUpperCase() || '?'}
-                        </div>
-                      )}
+                <div className="flex gap-6">
+                  {/* Left: Profile Photo */}
+                  <div className="flex-shrink-0">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Profile Photo
+                    </label>
+                    <div className="flex flex-col items-center space-y-3">
+                      <div>
+                        {previewImage || profileData.photoURL ? (
+                          <img
+                            src={previewImage || profileData.photoURL}
+                            alt="Preview"
+                            className="w-24 h-24 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-24 h-24 bg-gray-300 rounded-full flex items-center justify-center text-gray-600 text-3xl font-bold">
+                            {currentUser?.displayName?.charAt(0).toUpperCase() || '?'}
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-center">
+                        <label className="cursor-pointer bg-white py-2 px-4 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 inline-block">
+                          <span>Choose file</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageChange}
+                            className="hidden"
+                          />
+                        </label>
+                        <p className="mt-2 text-xs text-gray-500">
+                          PNG, JPG, GIF up to 5MB
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex-grow">
-                      <label className="cursor-pointer bg-white py-2 px-4 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 inline-block">
-                        <span>Choose file</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleImageChange}
-                          className="hidden"
-                        />
+                  </div>
+
+                  {/* Right: Display Name and Email */}
+                  <div className="flex-1 space-y-4">
+                    <div>
+                      <label htmlFor="displayName" className="block text-sm font-medium text-gray-700">
+                        Display Name
                       </label>
-                      <p className="mt-2 text-xs text-gray-500">
-                        PNG, JPG, GIF up to 5MB
+                      <input
+                        type="text"
+                        id="displayName"
+                        name="displayName"
+                        value={profileData.displayName}
+                        onChange={handleProfileChange}
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                        Email Address
+                      </label>
+                      <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        value={profileData.email}
+                        disabled
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm bg-gray-100 cursor-not-allowed sm:text-sm"
+                      />
+                      <p className="mt-1 text-xs text-gray-500">
+                        Email cannot be changed
                       </p>
                     </div>
                   </div>
-                </div>
-
-                <div>
-                  <label htmlFor="displayName" className="block text-sm font-medium text-gray-700">
-                    Display Name
-                  </label>
-                  <input
-                    type="text"
-                    id="displayName"
-                    name="displayName"
-                    value={profileData.displayName}
-                    onChange={handleProfileChange}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                    Email Address
-                  </label>
-                  <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    value={profileData.email}
-                    disabled
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm bg-gray-100 cursor-not-allowed sm:text-sm"
-                  />
-                  <p className="mt-1 text-xs text-gray-500">
-                    Email cannot be changed
-                  </p>
                 </div>
 
                 <div className="flex justify-end">
