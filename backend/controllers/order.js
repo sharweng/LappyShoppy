@@ -58,20 +58,26 @@ exports.getSingleOrder = async (req, res, next) => {
 }
 
 exports.allOrders = async (req, res, next) => {
-    const orders = await Order.find()
-    // console.log(orders)
-    let totalAmount = 0;
+    try {
+        const orders = await Order.find().populate('user', 'name email').sort({ createdAt: -1 })
+        
+        let totalAmount = 0;
+        orders.forEach(order => {
+            totalAmount += order.totalPrice
+        })
 
-    orders.forEach(order => {
-
-        totalAmount += order.totalPrice
-    })
-
-    res.status(200).json({
-        success: true,
-        totalAmount,
-        orders
-    })
+        res.status(200).json({
+            success: true,
+            totalAmount,
+            orders
+        })
+    } catch (error) {
+        console.error('Error fetching orders:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching orders'
+        })
+    }
 }
 
 exports.deleteOrder = async (req, res, next) => {
@@ -91,23 +97,35 @@ exports.deleteOrder = async (req, res, next) => {
 
 exports.updateOrder = async (req, res, next) => {
     const order = await Order.findById(req.params.id)
-    console.log(req.body.order)
-    if (order.orderStatus === 'Delivered') {
-        return res.status(400).json({
-            message: 'You have already delivered this order',
+    const newStatus = req.body.orderStatus || req.body.status;
 
+    if (!order) {
+        return res.status(404).json({
+            success: false,
+            message: 'Order not found with this ID'
         })
     }
 
-    order.orderItems.forEach(async item => {
-        await updateStock(item.product, item.quantity)
-    })
+    if (order.orderStatus === 'Delivered') {
+        return res.status(400).json({
+            success: false,
+            message: 'You have already delivered this order'
+        })
+    }
 
-    order.orderStatus = req.body.status
-    order.deliveredAt = Date.now()
+    // Only update stock when order is delivered
+    if (newStatus === 'Delivered' || newStatus === 'delivered') {
+        order.orderItems.forEach(async item => {
+            await updateStock(item.product, item.quantity)
+        })
+        order.deliveredAt = Date.now()
+    }
+
+    order.orderStatus = newStatus
     await order.save()
     res.status(200).json({
         success: true,
+        order
     })
 }
 

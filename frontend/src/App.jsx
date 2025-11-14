@@ -24,6 +24,7 @@ import ProductDetail from './components/Product/ProductDetail';
 import Dashboard from './components/Admin/Dashboard';
 import ProductList from './components/Admin/ProductList';
 import ProductForm from './components/Admin/ProductForm';
+import OrderList from './components/Admin/OrderList';
 import ProtectedRoute from './components/Route/ProtectedRoute';
 import AdminRoute from './components/Route/AdminRoute';
 
@@ -144,6 +145,14 @@ function AppContent() {
           element={
             <AdminRoute>
               <ProductForm />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/orders"
+          element={
+            <AdminRoute>
+              <OrderList />
             </AdminRoute>
           }
         />

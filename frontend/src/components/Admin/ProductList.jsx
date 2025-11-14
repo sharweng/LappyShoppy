@@ -69,8 +69,8 @@ function EnhancedTableHead(props) {
 
   return (
     <TableHead>
-      <TableRow>
-        <TableCell padding="checkbox">
+      <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+        <TableCell padding="checkbox" sx={{ width: 50 }}>
           <Checkbox
             color="primary"
             indeterminate={numSelected > 0 && numSelected < rowCount}
@@ -85,6 +85,10 @@ function EnhancedTableHead(props) {
             align={headCell.align || (headCell.numeric ? 'right' : 'left')}
             padding={headCell.disablePadding ? 'none' : 'normal'}
             sortDirection={orderBy === headCell.id ? order : false}
+            sx={{
+              width: headCell.id === 'name' ? 250 : headCell.id === 'brand' ? 120 : headCell.id === 'price' ? 130 : headCell.id === 'stock' ? 120 : headCell.id === 'category' ? 120 : 120,
+              flexShrink: 0
+            }}
           >
             {headCell.sortable === false ? (
               headCell.label
@@ -96,7 +100,7 @@ function EnhancedTableHead(props) {
                 hideSortIcon={false}
                 sx={{
                   '& .MuiTableSortLabel-icon': {
-                    opacity: orderBy === headCell.id ? 1 : 0.5,
+                    opacity: 1,
                   },
                 }}
               >
@@ -125,6 +129,7 @@ function EnhancedTableToolbar(props) {
         {
           pl: { sm: 2 },
           pr: { xs: 1, sm: 1 },
+          backgroundColor: '#f5f5f5'
         },
         numSelected > 0 && {
           bgcolor: (theme) =>
@@ -377,7 +382,7 @@ const ProductList = () => {
               onAddProduct={() => navigate('/admin/product/new')}
             />
             <TableContainer>
-              <Table sx={{ minWidth: 750 }} aria-labelledby="tableTitle">
+              <Table sx={{ minWidth: 750, tableLayout: 'fixed' }} aria-labelledby="tableTitle">
                 <EnhancedTableHead
                   numSelected={selected.length}
                   order={order}
@@ -404,21 +409,30 @@ const ProductList = () => {
                         selected={isItemSelected}
                         sx={{ cursor: 'pointer' }}
                       >
-                        <TableCell padding="checkbox">
+                        <TableCell padding="checkbox" sx={{ width: 50 }}>
                           <Checkbox
                             color="primary"
                             checked={isItemSelected}
                             inputProps={{ 'aria-labelledby': labelId }}
                           />
                         </TableCell>
-                        <TableCell component="th" id={labelId} scope="row" padding="none">
-                          {product.name}
+                        <TableCell component="th" id={labelId} scope="row" padding="none" sx={{ width: 250 }}>
+                          <Tooltip title={product.name}>
+                            <div style={{
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              maxWidth: '100%'
+                            }}>
+                              {product.name}
+                            </div>
+                          </Tooltip>
                         </TableCell>
-                        <TableCell align="center">{product.brand || 'N/A'}</TableCell>
-                        <TableCell align="center">
+                        <TableCell align="center" sx={{ width: 120 }}>{product.brand || 'N/A'}</TableCell>
+                        <TableCell align="center" sx={{ width: 130 }}>
                           ₱{product.price.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </TableCell>
-                        <TableCell align="center">
+                        <TableCell align="center" sx={{ width: 120 }}>
                           <Box
                             sx={{
                               display: 'inline-block',
@@ -435,8 +449,8 @@ const ProductList = () => {
                             {stockValue}
                           </Box>
                         </TableCell>
-                        <TableCell align="center">{product.category || 'N/A'}</TableCell>
-                        <TableCell align="center">
+                        <TableCell align="center" sx={{ width: 120 }}>{product.category || 'N/A'}</TableCell>
+                        <TableCell align="center" sx={{ width: 120 }}>
                           <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
                             <Tooltip title="Edit">
                               <IconButton

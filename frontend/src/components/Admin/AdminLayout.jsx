@@ -43,7 +43,7 @@ const AdminLayout = ({ children }) => {
       name: 'Orders',
       path: '/admin/orders',
       icon: ShoppingBag,
-      active: false,
+      active: true,
     },
     {
       name: 'Reviews',
