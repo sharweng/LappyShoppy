@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
@@ -23,6 +23,45 @@ const Checkout = () => {
   });
 
   const [paymentMethod, setPaymentMethod] = useState('COD');
+
+  // Fetch latest order shipping information on mount
+  useEffect(() => {
+    const fetchLatestOrderShippingInfo = async () => {
+      if (!currentUser) return;
+
+      try {
+        const token = await currentUser.getIdToken();
+        const config = {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        };
+
+        const { data } = await axios.get(`${API_URL}/orders/me`, config);
+        
+        if (data.orders && data.orders.length > 0) {
+          // Get the latest order
+          const latestOrder = data.orders[0];
+          
+          // Pre-fill shipping information from latest order
+          if (latestOrder.shippingInfo) {
+            setShippingInfo({
+              address: latestOrder.shippingInfo.address || '',
+              city: latestOrder.shippingInfo.city || '',
+              postalCode: latestOrder.shippingInfo.postalCode || '',
+              phoneNo: latestOrder.shippingInfo.phoneNo || '',
+              country: latestOrder.shippingInfo.country || 'Philippines'
+            });
+          }
+        }
+      } catch (error) {
+        // Silently fail if no previous orders exist
+        console.log('No previous orders found or error fetching orders');
+      }
+    };
+
+    fetchLatestOrderShippingInfo();
+  }, [currentUser]);
 
   if (!currentUser) {
     navigate('/login');
