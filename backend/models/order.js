@@ -93,6 +93,9 @@ const orderSchema = mongoose.Schema({
     deliveredAt: {
         type: Date
     },
+    cancelledAt: {
+        type: Date
+    },
     createdAt: {
         type: Date,
         default: Date.now

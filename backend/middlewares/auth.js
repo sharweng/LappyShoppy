@@ -26,9 +26,42 @@ exports.isAuthenticatedUser = async (req, res, next) => {
         }
 
         // Store Firebase email in request for email sending
-        // If email not in MongoDB, get it from Firebase token
+        // For OAuth users, decodedToken.email might be undefined
+        // So we need to fetch from Firebase Admin SDK
+        let firebaseEmail = decodedToken.email;
+        
+        if (!firebaseEmail) {
+            try {
+                // Fetch user details from Firebase Admin SDK
+                // This includes email, provider data, custom claims, etc.
+                const firebaseUser = await admin.auth().getUser(decodedToken.uid);
+                firebaseEmail = firebaseUser.email;
+                
+                console.log('Firebase User Details Retrieved:');
+                console.log('  Email:', firebaseUser.email);
+                console.log('  Display Name:', firebaseUser.displayName);
+                console.log('  Providers:', firebaseUser.providerData?.map(p => p.providerId));
+                
+                if (!firebaseEmail && firebaseUser.providerData && firebaseUser.providerData.length > 0) {
+                    // Sometimes OAuth providers store email in providerData
+                    firebaseEmail = firebaseUser.providerData[0].email;
+                    console.log('  Email from providerData:', firebaseEmail);
+                }
+                
+                console.log('Fetched email from Firebase Admin SDK:', firebaseEmail);
+            } catch (error) {
+                console.warn('Could not fetch email from Firebase Admin SDK:', error.message);
+            }
+        }
+        
         req.user = user;
-        req.user.firebaseEmail = decodedToken.email;
+        req.user.firebaseEmail = firebaseEmail;
+        
+        console.log('Auth Middleware - Firebase Token Verified:');
+        console.log('  Firebase UID:', decodedToken.uid);
+        console.log('  Firebase Email:', firebaseEmail);
+        console.log('  Provider:', decodedToken.firebase?.sign_in_provider || 'unknown');
+        console.log('  User MongoDB Email:', user.email);
         
         next()
     } catch (error) {

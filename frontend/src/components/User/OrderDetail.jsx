@@ -53,6 +53,8 @@ const OrderDetail = () => {
         return <Truck className="w-6 h-6 text-blue-600" />;
       case 'Delivered':
         return <CheckCircle className="w-6 h-6 text-green-600" />;
+      case 'Cancelled':
+        return <XCircle className="w-6 h-6 text-red-600" />;
       default:
         return <Package className="w-6 h-6 text-gray-600" />;
     }
@@ -66,6 +68,8 @@ const OrderDetail = () => {
         return 'bg-blue-100 text-blue-800';
       case 'Delivered':
         return 'bg-green-100 text-green-800';
+      case 'Cancelled':
+        return 'bg-red-100 text-red-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }

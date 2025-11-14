@@ -32,12 +32,23 @@ exports.newOrder = async (req, res, next) => {
         user: req.user._id
     })
 
+    // Subtract stock immediately when order is created
+    for (const item of orderItems) {
+        await updateStock(item.product, item.quantity, 'subtract');
+    }
+
     // Populate user details for email
     await order.populate('user', 'name email');
 
     try {
         // Get email from Firebase (more reliable than MongoDB)
         const userEmail = req.user.firebaseEmail || order.user.email;
+        
+        console.log('Email Debug - Order Confirmation:');
+        console.log('  req.user.firebaseEmail:', req.user.firebaseEmail);
+        console.log('  order.user.email:', order.user.email);
+        console.log('  Final userEmail:', userEmail);
+        console.log('  Auth Provider:', req.user.authProvider || 'not set');
         
         if (!userEmail) {
             console.warn('No email available for order confirmation');
@@ -64,9 +75,9 @@ exports.newOrder = async (req, res, next) => {
             ]
         });
 
-        console.log('Order confirmation email sent successfully');
+        console.log('Order confirmation email sent successfully to:', userEmail);
     } catch (error) {
-        console.error('Error sending email:', error);
+        console.error('Error sending email:', error.message);
         // Don't fail the request if email fails
     }
 
@@ -155,11 +166,17 @@ exports.updateOrder = async (req, res, next) => {
         })
     }
 
-    // Only update stock when order is delivered
+    // Handle order cancellation - restore stock
+    if ((newStatus === 'Cancelled' || newStatus === 'cancelled') && order.orderStatus !== 'Cancelled') {
+        // Restore stock by adding back the quantities
+        for (const item of order.orderItems) {
+            await updateStock(item.product, item.quantity, 'add');
+        }
+        order.cancelledAt = Date.now();
+    }
+
+    // Only update stock when order is delivered (already subtracted at checkout)
     if (newStatus === 'Delivered' || newStatus === 'delivered') {
-        order.orderItems.forEach(async item => {
-            await updateStock(item.product, item.quantity)
-        })
         order.deliveredAt = Date.now()
         // Update payment status to Paid when order is delivered
         order.paymentInfo.status = 'Paid'
@@ -170,7 +187,8 @@ exports.updateOrder = async (req, res, next) => {
 
     try {
         // Re-fetch the order with populated user details to ensure data is fresh
-        const updatedOrder = await Order.findById(req.params.id).populate('user', 'name email');
+        // Include firebaseUid because getUserEmail needs it for OAuth users
+        const updatedOrder = await Order.findById(req.params.id).populate('user', 'name email firebaseUid');
         
         if (!updatedOrder) {
             console.error('Order not found after save');
@@ -182,6 +200,11 @@ exports.updateOrder = async (req, res, next) => {
 
         // Get user email from Firebase or MongoDB
         const userEmail = await getUserEmail(updatedOrder.user);
+
+        console.log('Email Debug - Order Status Update:');
+        console.log('  Updated Order User Email:', updatedOrder.user?.email);
+        console.log('  User Firebase UID:', updatedOrder.user?.firebaseUid);
+        console.log('  Retrieved userEmail:', userEmail);
 
         if (!userEmail) {
             console.warn('No email found for order notification');
@@ -219,8 +242,9 @@ exports.updateOrder = async (req, res, next) => {
         });
     } catch (error) {
         console.error('Error sending email:', error.message);
+        console.error('Error stack:', error.stack);
         // Return the updated order even if email fails
-        const finalOrder = await Order.findById(req.params.id).populate('user', 'name email');
+        const finalOrder = await Order.findById(req.params.id).populate('user', 'name email firebaseUid');
         res.status(200).json({
             success: true,
             order: finalOrder
@@ -228,10 +252,19 @@ exports.updateOrder = async (req, res, next) => {
     }
 }
 
-async function updateStock(id, quantity) {
+async function updateStock(id, quantity, operation = 'subtract') {
     const product = await Product.findById(id);
 
-    product.stock = product.stock - quantity;
+    if (!product) {
+        console.error(`Product not found with ID: ${id}`);
+        return;
+    }
+
+    if (operation === 'subtract') {
+        product.stock = product.stock - quantity;
+    } else if (operation === 'add') {
+        product.stock = product.stock + quantity;
+    }
 
     await product.save({ validateBeforeSave: false })
 }
