@@ -54,6 +54,8 @@ const MyOrders = () => {
         return <Truck className="w-5 h-5 text-blue-600" />;
       case 'Delivered':
         return <CheckCircle className="w-5 h-5 text-green-600" />;
+      case 'Cancelled':
+        return <Package className="w-5 h-5 text-red-600" />;
       default:
         return <Package className="w-5 h-5 text-gray-600" />;
     }
@@ -67,14 +69,30 @@ const MyOrders = () => {
         return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'Delivered':
         return 'bg-green-100 text-green-800 border-green-200';
+      case 'Cancelled':
+        return 'bg-red-100 text-red-800 border-red-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
   const filteredOrders = filter === 'all' 
-    ? orders 
-    : orders.filter(order => order.orderStatus === filter);
+    ? orders.slice().sort((a, b) => {
+        // Delivered orders go to bottom, others at top
+        const aIsDelivered = a.orderStatus === 'Delivered' ? 1 : 0;
+        const bIsDelivered = b.orderStatus === 'Delivered' ? 1 : 0;
+        
+        if (aIsDelivered !== bIsDelivered) {
+          return aIsDelivered - bIsDelivered;
+        }
+        
+        // Within same group, sort by date (latest first)
+        return new Date(b.createdAt) - new Date(a.createdAt);
+      })
+    : orders.filter(order => order.orderStatus === filter).slice().sort((a, b) => {
+        // Sort by date (latest first)
+        return new Date(b.createdAt) - new Date(a.createdAt);
+      });
 
   if (loading) {
     return (
@@ -137,6 +155,16 @@ const MyOrders = () => {
               }`}
             >
               Delivered ({orders.filter(o => o.orderStatus === 'Delivered').length})
+            </button>
+            <button
+              onClick={() => setFilter('Cancelled')}
+              className={`px-4 py-2 rounded-lg font-medium transition duration-300 ${
+                filter === 'Cancelled'
+                  ? 'bg-red-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Cancelled ({orders.filter(o => o.orderStatus === 'Cancelled').length})
             </button>
           </div>
         </div>

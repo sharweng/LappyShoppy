@@ -59,13 +59,16 @@ function OrderRow({ row, onStatusChange }) {
         }
       };
 
+      // Capitalize first letter: processing -> Processing
+      const capitalizedStatus = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
+
       await axios.put(
         `${API_URL}/admin/order/${row._id}`,
-        { orderStatus: newStatus },
+        { orderStatus: capitalizedStatus },
         config
       );
 
-      setStatus(newStatus);
+      setStatus(capitalizedStatus);
       toast.success('Order status updated successfully');
       onStatusChange();
     } catch (error) {
