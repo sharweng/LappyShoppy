@@ -11,6 +11,9 @@ const { newOrder,
 	totalSales,
 	customerSales,
 	salesPerMonth,
+	salesByDateRange,
+	productsSoldPerMonth,
+	productsSoldByDateRange,
 		
 
 	} = require('../controllers/order')
@@ -26,4 +29,7 @@ router.get('/admin/total-orders', totalOrders);
 router.get('/admin/total-sales', totalSales);
 router.get('/admin/customer-sales', customerSales);
 router.get('/admin/sales-per-month', salesPerMonth);
+router.get('/admin/sales-by-date-range', salesByDateRange);
+router.get('/admin/products-sold-per-month', productsSoldPerMonth);
+router.get('/admin/products-sold-by-date-range', productsSoldByDateRange);
 module.exports = router;

@@ -375,14 +375,23 @@ exports.customerSales = async (req, res, next) => {
 }
 
 exports.salesPerMonth = async (req, res, next) => {
+    const year = req.query.year ? parseInt(req.query.year) : new Date().getFullYear();
+    
     const salesPerMonth = await Order.aggregate([
-
+        {
+            $match: {
+                createdAt: {
+                    $gte: new Date(year, 0, 1),
+                    $lte: new Date(year, 11, 31, 23, 59, 59)
+                }
+            }
+        },
         {
             $group: {
-                // _id: {month: { $month: "$paidAt" } },
+                // _id: {month: { $month: "$createdAt" } },
                 _id: {
-                    year: { $year: "$paidAt" },
-                    month: { $month: "$paidAt" }
+                    year: { $year: "$createdAt" },
+                    month: { $month: "$createdAt" }
                 },
                 total: { $sum: "$totalPrice" },
             },
@@ -393,7 +402,7 @@ exports.salesPerMonth = async (req, res, next) => {
                 month: {
                     $let: {
                         vars: {
-                            monthsInString: [, 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', ' Sept', 'Oct', 'Nov', 'Dec']
+                            monthsInString: [, 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec']
                         },
                         in: {
                             $arrayElemAt: ['$$monthsInString', "$_id.month"]
@@ -412,7 +421,21 @@ exports.salesPerMonth = async (req, res, next) => {
         }
 
     ])
-    if (!salesPerMonth) {
+    
+    // Fill in missing months with 0 sales
+    const allMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec'];
+    const salesMap = {};
+    
+    salesPerMonth.forEach(item => {
+        salesMap[item.month] = item.total;
+    });
+    
+    const completeData = allMonths.map(month => ({
+        month: month,
+        total: salesMap[month] || 0
+    }));
+    
+    if (!completeData) {
         return res.status(404).json({
             message: 'error sales per month',
         })
@@ -420,7 +443,238 @@ exports.salesPerMonth = async (req, res, next) => {
     // return console.log(customerSales)
     res.status(200).json({
         success: true,
-        salesPerMonth
+        salesPerMonth: completeData
     })
 
+}
+
+exports.salesByDateRange = async (req, res, next) => {
+    try {
+        const { startDate, endDate } = req.query;
+        
+        // Parse dates
+        const start = startDate ? new Date(startDate) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        const end = endDate ? new Date(endDate) : new Date();
+        
+        // Ensure end date includes the entire day
+        end.setHours(23, 59, 59, 999);
+        
+        const salesByDate = await Order.aggregate([
+            {
+                $match: {
+                    createdAt: {
+                        $gte: start,
+                        $lte: end
+                    }
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        $dateToString: {
+                            format: "%Y-%m-%d",
+                            date: "$createdAt"
+                        }
+                    },
+                    sales: { $sum: "$totalPrice" },
+                    orderCount: { $sum: 1 }
+                }
+            },
+            {
+                $sort: { "_id": 1 }
+            },
+            {
+                $project: {
+                    _id: 0,
+                    date: "$_id",
+                    sales: 1,
+                    orderCount: 1
+                }
+            }
+        ]);
+        
+        // Generate array of all dates in range
+        const allDates = [];
+        const currentDate = new Date(start);
+        
+        while (currentDate <= end) {
+            const dateStr = currentDate.toISOString().split('T')[0];
+            allDates.push(dateStr);
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+        
+        // Create a map of sales data
+        const salesMap = {};
+        salesByDate.forEach(item => {
+            salesMap[item.date] = item.sales;
+        });
+        
+        // Fill in all dates with 0 if no sales
+        const completeData = allDates.map(date => ({
+            date: date,
+            sales: salesMap[date] || 0
+        }));
+        
+        res.status(200).json({
+            success: true,
+            salesByDate: completeData
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+}
+
+exports.productsSoldPerMonth = async (req, res, next) => {
+    const year = req.query.year ? parseInt(req.query.year) : new Date().getFullYear();
+    
+    const productsSoldPerMonth = await Order.aggregate([
+        {
+            $match: {
+                createdAt: {
+                    $gte: new Date(year, 0, 1),
+                    $lte: new Date(year, 11, 31, 23, 59, 59)
+                }
+            }
+        },
+        {
+            $unwind: "$orderItems"
+        },
+        {
+            $group: {
+                _id: {
+                    year: { $year: "$createdAt" },
+                    month: { $month: "$createdAt" }
+                },
+                totalQuantity: { $sum: "$orderItems.quantity" },
+            },
+        },
+        {
+            $addFields: {
+                month: {
+                    $let: {
+                        vars: {
+                            monthsInString: [, 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec']
+                        },
+                        in: {
+                            $arrayElemAt: ['$$monthsInString', "$_id.month"]
+                        }
+                    }
+                }
+            }
+        },
+        { $sort: { "_id.month": 1 } },
+        {
+            $project: {
+                _id: 0,
+                month: 1,
+                totalQuantity: 1,
+            }
+        }
+    ])
+    
+    // Fill in missing months with 0 products
+    const allMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec'];
+    const productsMap = {};
+    
+    productsSoldPerMonth.forEach(item => {
+        productsMap[item.month] = item.totalQuantity;
+    });
+    
+    const completeData = allMonths.map(month => ({
+        month: month,
+        totalQuantity: productsMap[month] || 0
+    }));
+    
+    if (!completeData) {
+        return res.status(404).json({
+            message: 'error products sold per month',
+        })
+    }
+    res.status(200).json({
+        success: true,
+        productsSoldPerMonth: completeData
+    })
+}
+
+exports.productsSoldByDateRange = async (req, res, next) => {
+    try {
+        const { startDate, endDate } = req.query;
+        
+        // Parse dates
+        const start = startDate ? new Date(startDate) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        const end = endDate ? new Date(endDate) : new Date();
+        
+        // Ensure end date includes the entire day
+        end.setHours(23, 59, 59, 999);
+        
+        const productsByDate = await Order.aggregate([
+            {
+                $match: {
+                    createdAt: {
+                        $gte: start,
+                        $lte: end
+                    }
+                }
+            },
+            {
+                $unwind: "$orderItems"
+            },
+            {
+                $group: {
+                    _id: {
+                        $dateToString: {
+                            format: "%Y-%m-%d",
+                            date: "$createdAt"
+                        }
+                    },
+                    totalQuantity: { $sum: "$orderItems.quantity" }
+                }
+            },
+            {
+                $sort: { "_id": 1 }
+            },
+            {
+                $project: {
+                    _id: 0,
+                    date: "$_id",
+                    totalQuantity: 1
+                }
+            }
+        ]);
+        
+        // Generate array of all dates in range
+        const allDates = [];
+        const currentDate = new Date(start);
+        
+        while (currentDate <= end) {
+            const dateStr = currentDate.toISOString().split('T')[0];
+            allDates.push(dateStr);
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+        
+        // Create a map of products data
+        const productsMap = {};
+        productsByDate.forEach(item => {
+            productsMap[item.date] = item.totalQuantity;
+        });
+        
+        // Fill in all dates with 0 if no products sold
+        const completeData = allDates.map(date => ({
+            date: date,
+            totalQuantity: productsMap[date] || 0
+        }));
+        
+        res.status(200).json({
+            success: true,
+            productsByDate: completeData
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
 }

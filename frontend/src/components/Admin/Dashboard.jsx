@@ -1,16 +1,34 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Link } from 'react-router-dom';
 import AdminLayout from './AdminLayout';
 import { 
   Users, 
   ShoppingBag, 
   DollarSign, 
-  Package,
-  TrendingUp,
-  Activity
+  Package
 } from 'lucide-react';
+import { 
+  LineChart, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend, 
+  ResponsiveContainer 
+} from 'recharts';
 import axios from 'axios';
+
+// Format large numbers with K/M notation
+const formatNumber = (value) => {
+  if (value >= 1000000) {
+    return (value / 1000000).toFixed(1) + 'M';
+  }
+  if (value >= 1000) {
+    return (value / 1000).toFixed(1) + 'K';
+  }
+  return value;
+};
 
 const Dashboard = () => {
   const { currentUser } = useAuth();
@@ -21,10 +39,39 @@ const Dashboard = () => {
     totalRevenue: 0
   });
   const [loading, setLoading] = useState(true);
+  const [startDate, setStartDate] = useState(() => {
+    const date = new Date();
+    date.setDate(date.getDate() - 7);
+    return date.toISOString().split('T')[0];
+  });
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [salesData, setSalesData] = useState([]);
+  const [monthlySalesData, setMonthlySalesData] = useState([]);
+  const [loadingCharts, setLoadingCharts] = useState(false);
+  const [monthlyTab, setMonthlyTab] = useState('money'); // 'money' or 'products'
+  const [saleOverviewTab, setSaleOverviewTab] = useState('money'); // 'money' or 'products'
+  const [monthlyProductsData, setMonthlyProductsData] = useState([]);
+  const [productsData, setProductsData] = useState([]);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
+  // Generate year options (current year and past 5 years)
+  const yearOptions = [];
+  const currentYear = new Date().getFullYear();
+  for (let i = 0; i < 6; i++) {
+    yearOptions.push(currentYear - i);
+  }
 
   useEffect(() => {
     fetchStats();
+    fetchMonthlySalesData();
+    fetchMonthlyProductsData();
+    fetchSalesByDateRange();
   }, []);
+
+  useEffect(() => {
+    fetchMonthlySalesData();
+    fetchMonthlyProductsData();
+  }, [selectedYear]);
 
   const fetchStats = async () => {
     try {
@@ -42,17 +89,23 @@ const Dashboard = () => {
         }
       };
 
-      // Fetch users count
-      const { data: usersData } = await axios.get('http://localhost:4001/api/v1/admin/users', config);
+      // Fetch all stats in parallel
+      const [usersRes, ordersRes, salesRes, productsRes] = await Promise.all([
+        axios.get('http://localhost:4001/api/v1/admin/users', config).catch(() => ({ data: { users: [] } })),
+        axios.get('http://localhost:4001/api/v1/admin/total-orders', config).catch(() => ({ data: { totalOrders: [] } })),
+        axios.get('http://localhost:4001/api/v1/admin/total-sales', config).catch(() => ({ data: { totalSales: [] } })),
+        axios.get('http://localhost:4001/api/v1/products', config).catch(() => ({ data: { productsCount: 0 } }))
+      ]);
       
-      // Fetch products count (you'll need to create this endpoint)
-      // const { data: productsData } = await axios.get('http://localhost:4001/api/v1/products', config);
+      const totalOrders = ordersRes.data.totalOrders?.[0]?.count || 0;
+      const totalSales = salesRes.data.totalSales?.[0]?.totalSales || 0;
+      const totalProducts = productsRes.data.productsCount || 0;
       
       setStats({
-        totalUsers: usersData.users?.length || 0,
-        totalProducts: 0, // Update when products API is ready
-        totalOrders: 0,   // Update when orders API is ready
-        totalRevenue: 0   // Update when orders API is ready
+        totalUsers: usersRes.data.users?.length || 0,
+        totalProducts: totalProducts,
+        totalOrders: totalOrders,
+        totalRevenue: totalSales
       });
     } catch (error) {
       console.error('Error fetching stats:', error);
@@ -61,34 +114,139 @@ const Dashboard = () => {
     }
   };
 
+  const fetchMonthlySalesData = async () => {
+    try {
+      const token = await currentUser?.getIdToken();
+      if (!token) return;
+
+      const config = {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      };
+
+      const { data } = await axios.get('http://localhost:4001/api/v1/admin/sales-per-month', {
+        ...config,
+        params: {
+          year: selectedYear
+        }
+      });
+      
+      if (data.salesPerMonth && data.salesPerMonth.length > 0) {
+        setMonthlySalesData(data.salesPerMonth);
+      }
+    } catch (error) {
+      console.error('Error fetching monthly sales:', error);
+    }
+  };
+
+  const fetchMonthlyProductsData = async () => {
+    try {
+      const token = await currentUser?.getIdToken();
+      if (!token) return;
+
+      const config = {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      };
+
+      const { data } = await axios.get('http://localhost:4001/api/v1/admin/products-sold-per-month', {
+        ...config,
+        params: {
+          year: selectedYear
+        }
+      });
+      
+      if (data.productsSoldPerMonth && data.productsSoldPerMonth.length > 0) {
+        setMonthlyProductsData(data.productsSoldPerMonth);
+      }
+    } catch (error) {
+      console.error('Error fetching monthly products:', error);
+    }
+  };
+
+  const fetchSalesByDateRange = async (start = startDate, end = endDate) => {
+    try {
+      setLoadingCharts(true);
+      const token = await currentUser?.getIdToken();
+      if (!token) return;
+
+      const config = {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      };
+
+      const [salesRes, productsRes] = await Promise.all([
+        axios.get('http://localhost:4001/api/v1/admin/sales-by-date-range', {
+          ...config,
+          params: {
+            startDate: start,
+            endDate: end
+          }
+        }),
+        axios.get('http://localhost:4001/api/v1/admin/products-sold-by-date-range', {
+          ...config,
+          params: {
+            startDate: start,
+            endDate: end
+          }
+        })
+      ]);
+      
+      if (salesRes.data.salesByDate) {
+        // Format dates for display (e.g., "Nov 15" or "11/15")
+        const formattedData = salesRes.data.salesByDate.map(item => ({
+          ...item,
+          displayDate: new Date(item.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+        }));
+        setSalesData(formattedData);
+      }
+
+      if (productsRes.data.productsByDate) {
+        // Format dates for display
+        const formattedProductData = productsRes.data.productsByDate.map(item => ({
+          ...item,
+          displayDate: new Date(item.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+        }));
+        setProductsData(formattedProductData);
+      }
+    } catch (error) {
+      console.error('Error fetching sales by date range:', error);
+    } finally {
+      setLoadingCharts(false);
+    }
+  };
+
+  const handleDateRangeChange = () => {
+    fetchSalesByDateRange(startDate, endDate);
+  };
+
   const statCards = [
     {
       title: 'Total Users',
       value: stats.totalUsers,
       icon: Users,
-      color: 'bg-blue-500',
-      change: '+12%'
+      color: 'bg-blue-500'
     },
     {
       title: 'Total Products',
       value: stats.totalProducts,
       icon: Package,
-      color: 'bg-green-500',
-      change: '+8%'
+      color: 'bg-green-500'
     },
     {
       title: 'Total Orders',
       value: stats.totalOrders,
       icon: ShoppingBag,
-      color: 'bg-purple-500',
-      change: '+23%'
+      color: 'bg-purple-500'
     },
     {
       title: 'Total Revenue',
       value: `$${stats.totalRevenue.toLocaleString()}`,
       icon: DollarSign,
-      color: 'bg-yellow-500',
-      change: '+15%'
+      color: 'bg-yellow-500'
     }
   ];
 
@@ -96,88 +254,187 @@ const Dashboard = () => {
     <AdminLayout>
       <div className="p-6 md:p-8">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
           <p className="mt-1 text-sm text-gray-600">
             Welcome back, {currentUser?.displayName || 'Admin'}
           </p>
         </div>
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+
+        {/* Stats Grid - More Compact */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           {statCards.map((stat, index) => (
             <div
               key={index}
-              className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow"
+              className="bg-white rounded-lg shadow p-4"
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-2">{stat.value}</p>
-                  <div className="flex items-center mt-2">
-                    <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
-                    <span className="text-sm text-green-500 font-medium">{stat.change}</span>
-                  </div>
+                  <p className="text-xs font-medium text-gray-600">{stat.title}</p>
+                  <p className="text-xl font-bold text-gray-900 mt-1">{stat.value}</p>
                 </div>
-                <div className={`${stat.color} p-3 rounded-lg`}>
-                  <stat.icon className="w-8 h-8 text-white" />
+                <div className={`${stat.color} p-2 rounded-lg`}>
+                  <stat.icon className="w-6 h-6 text-white" />
                 </div>
               </div>
             </div>
           ))}
         </div>
 
-        {/* Quick Actions */}
-        <div className="bg-white rounded-xl shadow-md p-6 mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Quick Actions</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Link
-              to="/admin/users"
-              className="flex items-center p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
-            >
-              <Users className="w-6 h-6 text-blue-600 mr-3" />
-              <div>
-                <h3 className="font-semibold text-gray-900">Manage Users</h3>
-                <p className="text-sm text-gray-600">View and manage users</p>
-              </div>
-            </Link>
-            <Link
-              to="/admin/products"
-              className="flex items-center p-4 border-2 border-gray-200 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors"
-            >
-              <Package className="w-6 h-6 text-green-600 mr-3" />
-              <div>
-                <h3 className="font-semibold text-gray-900">Manage Products</h3>
-                <p className="text-sm text-gray-600">Add, edit and manage laptops</p>
-              </div>
-            </Link>
-            <Link
-              to="/admin/orders"
-              className="flex items-center p-4 border-2 border-gray-200 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors"
-            >
-              <ShoppingBag className="w-6 h-6 text-purple-600 mr-3" />
-              <div>
-                <h3 className="font-semibold text-gray-900">Manage Orders</h3>
-                <p className="text-sm text-gray-600">View and process orders</p>
-              </div>
-            </Link>
+        {/* Monthly Sales Chart */}
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
+            <h2 className="text-xl font-bold text-gray-900">Monthly Sales ({selectedYear})</h2>
+            <div className="flex gap-2">
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                className="px-3 py-1 text-sm border border-gray-300 rounded-lg bg-white"
+              >
+                {yearOptions.map(year => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+              <button
+                onClick={() => setMonthlyTab('money')}
+                className={`px-3 py-1 text-sm rounded-lg transition-colors ${
+                  monthlyTab === 'money'
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Money
+              </button>
+              <button
+                onClick={() => setMonthlyTab('products')}
+                className={`px-3 py-1 text-sm rounded-lg transition-colors ${
+                  monthlyTab === 'products'
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Products
+              </button>
+            </div>
           </div>
+          {monthlySalesData.length > 0 || monthlyProductsData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={monthlyTab === 'money' ? monthlySalesData : monthlyProductsData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis tickFormatter={formatNumber} />
+                <Tooltip 
+                  formatter={(value) => monthlyTab === 'money' ? `$${value.toLocaleString()}` : `${value} units`} 
+                />
+                <Legend />
+                <Line 
+                  type="linear" 
+                  dataKey={monthlyTab === 'money' ? 'total' : 'totalQuantity'} 
+                  stroke={monthlyTab === 'money' ? '#8b5cf6' : '#10b981'}
+                  strokeWidth={2}
+                  dot={{ r: 4 }}
+                  activeDot={{ r: 6 }}
+                  name={monthlyTab === 'money' ? 'Sales' : 'Products'}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-80 flex items-center justify-center text-gray-500">
+              No monthly data available
+            </div>
+          )}
         </div>
 
-        {/* Recent Activity */}
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <div className="flex items-center mb-4">
-            <Activity className="w-6 h-6 text-gray-700 mr-2" />
-            <h2 className="text-xl font-bold text-gray-900">Recent Activity</h2>
-          </div>
-          <div className="space-y-4">
-            {loading ? (
-              <p className="text-gray-600">Loading activity...</p>
-            ) : (
-              <div className="text-gray-600">
-                <p>No recent activity to display.</p>
+        {/* Sales Chart with Custom Date Range Filter */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
+            <h2 className="text-xl font-bold text-gray-900">Sales Overview</h2>
+            <div className="flex flex-col sm:flex-row gap-2">
+              
+              <div className="flex gap-1">
+                <label className="text-sm text-gray-700 self-center">From:</label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="px-2 py-1 border border-gray-300 rounded-lg text-sm"
+                />
               </div>
-            )}
+              <div className="flex gap-1">
+                <label className="text-sm text-gray-700 self-center">To:</label>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="px-2 py-1 border border-gray-300 rounded-lg text-sm"
+                />
+              </div>
+              <button
+                onClick={handleDateRangeChange}
+                className="px-4 py-1 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition-colors"
+              >
+                Filter
+              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setSaleOverviewTab('money')}
+                  className={`px-3 py-1 text-sm rounded-lg transition-colors ${
+                    saleOverviewTab === 'money'
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  Money
+                </button>
+                <button
+                  onClick={() => setSaleOverviewTab('products')}
+                  className={`px-3 py-1 text-sm rounded-lg transition-colors ${
+                    saleOverviewTab === 'products'
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  Products
+                </button>
+              </div>
+            </div>
           </div>
+          {loadingCharts ? (
+            <div className="h-96 flex items-center justify-center text-gray-500">
+              Loading chart data...
+            </div>
+          ) : (saleOverviewTab === 'money' ? salesData.length > 0 : productsData.length > 0) ? (
+            <ResponsiveContainer width="100%" height={350}>
+              <LineChart data={saleOverviewTab === 'money' ? salesData : productsData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="displayDate" 
+                  angle={-45} 
+                  textAnchor="end" 
+                  height={80}
+                  fontSize={12}
+                />
+                <YAxis tickFormatter={formatNumber} />
+                <Tooltip 
+                  formatter={(value) => saleOverviewTab === 'money' ? `$${value.toLocaleString()}` : `${value} units`} 
+                />
+                <Legend />
+                <Line 
+                  type="linear" 
+                  dataKey={saleOverviewTab === 'money' ? 'sales' : 'totalQuantity'} 
+                  stroke={saleOverviewTab === 'money' ? '#3b82f6' : '#10b981'}
+                  strokeWidth={2}
+                  dot={{ r: 3 }}
+                  activeDot={{ r: 5 }}
+                  name={saleOverviewTab === 'money' ? 'Sales' : 'Products'}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-96 flex items-center justify-center text-gray-500">
+              No sales data available for this date range
+            </div>
+          )}
         </div>
       </div>
     </AdminLayout>
