@@ -180,10 +180,10 @@ function OrderRow({ row, onStatusChange }) {
                     Payment Information
                   </Typography>
                   <Typography variant="body2">
-                    <strong>Method:</strong> {row.paymentInfo?.method || 'Not specified'}
+                    <strong>Method:</strong> {row.paymentInfo?.id === 'COD' ? 'Cash on Delivery' : (row.paymentInfo?.method || 'Not specified')}
                   </Typography>
                   <Typography variant="body2">
-                    <strong>Status:</strong> {row.paymentInfo?.status || 'Not specified'}
+                    <strong>Status:</strong> {row.paymentInfo?.status ? row.paymentInfo.status.charAt(0).toUpperCase() + row.paymentInfo.status.slice(1).toLowerCase() : 'Not specified'}
                   </Typography>
                   <Typography variant="body2" sx={{ mt: 2 }}>
                     <strong>Total Price:</strong> ₱{row.totalPrice?.toLocaleString('en-PH', { minimumFractionDigits: 2 })}

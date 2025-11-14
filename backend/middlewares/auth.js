@@ -25,7 +25,11 @@ exports.isAuthenticatedUser = async (req, res, next) => {
             return res.status(401).json({ message: 'User not found' })
         }
 
+        // Store Firebase email in request for email sending
+        // If email not in MongoDB, get it from Firebase token
         req.user = user;
+        req.user.firebaseEmail = decodedToken.email;
+        
         next()
     } catch (error) {
         console.error('Auth error:', error.message);

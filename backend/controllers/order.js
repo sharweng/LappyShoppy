@@ -1,5 +1,9 @@
 const Order = require('../models/order');
 const Product = require('../models/product');
+const sendEmail = require('../utils/sendEmail');
+const { generateOrderPDF } = require('../utils/generatePDF');
+const { getOrderConfirmationEmail, getOrderStatusUpdateEmail } = require('../utils/emailTemplates');
+const { getUserEmail } = require('../utils/getUserEmail');
 
 
 
@@ -27,6 +31,44 @@ exports.newOrder = async (req, res, next) => {
         paidAt: Date.now(),
         user: req.user._id
     })
+
+    // Populate user details for email
+    await order.populate('user', 'name email');
+
+    try {
+        // Get email from Firebase (more reliable than MongoDB)
+        const userEmail = req.user.firebaseEmail || order.user.email;
+        
+        if (!userEmail) {
+            console.warn('No email available for order confirmation');
+            throw new Error('User email not found');
+        }
+
+        // Generate PDF receipt
+        const pdfBuffer = await generateOrderPDF(order, `receipt-${order._id}.pdf`);
+
+        // Get HTML email template
+        const htmlEmail = getOrderConfirmationEmail(order);
+
+        // Send confirmation email with PDF attachment
+        await sendEmail({
+            email: userEmail,
+            subject: `Order Confirmation - LappyShoppy`,
+            html: htmlEmail,
+            attachments: [
+                {
+                    filename: `LappyShoppy-Receipt-${order._id}.pdf`,
+                    content: pdfBuffer,
+                    contentType: 'application/pdf'
+                }
+            ]
+        });
+
+        console.log('Order confirmation email sent successfully');
+    } catch (error) {
+        console.error('Error sending email:', error);
+        // Don't fail the request if email fails
+    }
 
     res.status(200).json({
         success: true,
@@ -119,14 +161,71 @@ exports.updateOrder = async (req, res, next) => {
             await updateStock(item.product, item.quantity)
         })
         order.deliveredAt = Date.now()
+        // Update payment status to Paid when order is delivered
+        order.paymentInfo.status = 'Paid'
     }
 
     order.orderStatus = newStatus
     await order.save()
-    res.status(200).json({
-        success: true,
-        order
-    })
+
+    try {
+        // Re-fetch the order with populated user details to ensure data is fresh
+        const updatedOrder = await Order.findById(req.params.id).populate('user', 'name email');
+        
+        if (!updatedOrder) {
+            console.error('Order not found after save');
+            return res.status(200).json({
+                success: true,
+                order
+            });
+        }
+
+        // Get user email from Firebase or MongoDB
+        const userEmail = await getUserEmail(updatedOrder.user);
+
+        if (!userEmail) {
+            console.warn('No email found for order notification');
+            return res.status(200).json({
+                success: true,
+                order: updatedOrder
+            });
+        }
+
+        // Generate PDF receipt
+        const pdfBuffer = await generateOrderPDF(updatedOrder, `receipt-${updatedOrder._id}.pdf`);
+
+        // Get HTML email template for status update
+        const htmlEmail = getOrderStatusUpdateEmail(updatedOrder);
+
+        // Send status update email with PDF attachment
+        await sendEmail({
+            email: userEmail,
+            subject: `Order Status Update - LappyShoppy`,
+            html: htmlEmail,
+            attachments: [
+                {
+                    filename: `LappyShoppy-Receipt-${updatedOrder._id}.pdf`,
+                    content: pdfBuffer,
+                    contentType: 'application/pdf'
+                }
+            ]
+        });
+
+        console.log('Order status update email sent successfully to:', userEmail);
+        
+        res.status(200).json({
+            success: true,
+            order: updatedOrder
+        });
+    } catch (error) {
+        console.error('Error sending email:', error.message);
+        // Return the updated order even if email fails
+        const finalOrder = await Order.findById(req.params.id).populate('user', 'name email');
+        res.status(200).json({
+            success: true,
+            order: finalOrder
+        });
+    }
 }
 
 async function updateStock(id, quantity) {

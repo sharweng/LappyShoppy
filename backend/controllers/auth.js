@@ -1,7 +1,8 @@
 const User = require('../models/user');
 const crypto = require('crypto')
 const cloudinary = require('cloudinary')
-const sendEmail = require('../utils/sendEmail')
+const sendEmail = require('../utils/sendEmail');
+const { getForgotPasswordEmail } = require('../utils/emailTemplates');
 
 exports.registerUser = async (req, res, next) => {
     try {
@@ -163,12 +164,15 @@ exports.forgotPassword = async (req, res, next) => {
     await user.save({ validateBeforeSave: false });
     // Create reset password url
     const resetUrl = `${req.protocol}://localhost:5173/password/reset/${resetToken}`;
-    const message = `Your password reset token is as follow:\n\n${resetUrl}\n\nIf you have not requested this email, then ignore it.`
+    
     try {
+        // Get professional HTML email template
+        const htmlEmail = getForgotPasswordEmail(resetUrl, user.name);
+
         await sendEmail({
             email: user.email,
-            subject: 'Lappy Shoppy Password Recovery',
-            message
+            subject: 'Password Reset Request - LappyShoppy',
+            html: htmlEmail
         })
 
         res.status(200).json({
