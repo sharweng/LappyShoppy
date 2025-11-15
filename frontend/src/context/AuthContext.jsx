@@ -43,6 +43,7 @@ export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState(null);
+  const [profileUpdateTrigger, setProfileUpdateTrigger] = useState(0);
 
   // Firebase logout
   const logout = async (showToast = true) => {
@@ -165,6 +166,11 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Trigger profile update for components that need to refresh
+  const triggerProfileUpdate = () => {
+    setProfileUpdateTrigger(prev => prev + 1);
+  };
+
   // Update user profile
   const updateUserProfile = async (userData, token) => {
     try {
@@ -180,6 +186,7 @@ export const AuthProvider = ({ children }) => {
         config
       );
       setUserProfile(data.user);
+      setProfileUpdateTrigger(prev => prev + 1); // Trigger update for other components
       toast.success('Profile updated successfully');
       return data.user;
     } catch (error) {
@@ -208,6 +215,8 @@ export const AuthProvider = ({ children }) => {
     updateUserPassword,
     getUserProfile,
     updateUserProfile,
+    triggerProfileUpdate,
+    profileUpdateTrigger,
     loading
   };
 

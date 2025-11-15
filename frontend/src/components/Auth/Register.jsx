@@ -82,16 +82,14 @@ const Register = () => {
       const firebaseUser = userCredential.user;
       
       // Step 2: Also register in MongoDB backend (WITHOUT password - Firebase handles auth)
-      const defaultAvatar = `data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iIzM3NTFGRiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjYwIiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9IkFyaWFsIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+JHtuYW1lLmNoYXJBdCgwKS50b1VwcGVyQ2FzZSgpfTwvdGV4dD48L3N2Zz4=`;
-      
       try {
         await axios.post('http://localhost:4001/api/v1/register', {
           name,
           username,
           email,
-          firebaseUid: firebaseUser.uid,
+          firebaseUid: firebaseUser.uid
           // No password - Firebase handles authentication
-          avatar: defaultAvatar
+          // No default avatar - let Profile component handle fallback display
         });
       } catch (backendError) {
         console.error('Backend registration error:', backendError);
@@ -170,8 +168,8 @@ const Register = () => {
       try {
         const registrationData = {
           name: firebaseUser.displayName || 'Google User',
-          firebaseUid: firebaseUser.uid,
-          avatar: firebaseUser.photoURL || `data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iIzM3NTFGRiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjYwIiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9IkFyaWFsIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+RzwvdGV4dD48L3N2Zz4=`
+          firebaseUid: firebaseUser.uid
+          // No default avatar - let Profile component handle fallback display
         };
         
         // Add email if available
@@ -241,8 +239,8 @@ const Register = () => {
       try {
         const registrationData = {
           name: firebaseUser.displayName || 'Facebook User',
-          firebaseUid: firebaseUser.uid,
-          avatar: firebaseUser.photoURL || `data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iIzM3NTFGRiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjYwIiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9IkFyaWFsIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+RjwvdGV4dD48L3N2Zz4=`
+          firebaseUid: firebaseUser.uid
+          // No default avatar - let Profile component handle fallback display
         };
         
         // Add email if available

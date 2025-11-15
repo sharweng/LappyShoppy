@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 
 const Navbar = () => {
-  const { currentUser, logout } = useAuth();
+  const { currentUser, logout, profileUpdateTrigger } = useAuth();
   const { getCartCount } = useCart();
   const navigate = useNavigate();
   const location = useLocation();
@@ -35,7 +35,7 @@ const Navbar = () => {
       };
       fetchUserData();
     }
-  }, [currentUser, isAuthPage]);
+  }, [currentUser?.uid, currentUser?.photoURL, currentUser?.displayName, isAuthPage, profileUpdateTrigger]);
 
   const handleLogout = async () => {
     try {

@@ -104,10 +104,7 @@ exports.registerUser = async (req, res, next) => {
             });
         }
         
-        let avatarData = {
-            public_id: 'default_avatar',
-            url: 'https://res.cloudinary.com/dcug5cq7c/image/upload/v1234567890/default-avatar.png'
-        };
+        let avatarData = null;
         
         // Upload avatar to Cloudinary if provided
         if (avatar && avatar.startsWith('data:image')) {
@@ -126,7 +123,7 @@ exports.registerUser = async (req, res, next) => {
                 console.log('Avatar uploaded successfully');
             } catch (uploadError) {
                 console.error('Avatar upload failed:', uploadError.message);
-                // Continue with default avatar if upload fails
+                // Continue without avatar if upload fails
             }
         }
         
@@ -135,8 +132,12 @@ exports.registerUser = async (req, res, next) => {
         const userData = {
             name,
             username: username.toLowerCase(), // Store username in lowercase
-            avatar: avatarData
         };
+        
+        // Add avatar only if it was uploaded
+        if (avatarData) {
+            userData.avatar = avatarData;
+        }
         
         // Add email if provided
         if (email) {
@@ -503,10 +504,13 @@ exports.updateProfile = async (req, res, next) => {
         // Update avatar only if provided and is a base64 string
         if (req.body.avatar && req.body.avatar.startsWith('data:image')) {
             let user = await User.findById(req.user.id)
-            // console.log(user)
-            const image_id = user.avatar.public_id;
-            const res = await cloudinary.v2.uploader.destroy(image_id);
-            // console.log("Res", res)
+            
+            // Delete existing avatar from Cloudinary if it exists
+            if (user.avatar && user.avatar.public_id) {
+                const image_id = user.avatar.public_id;
+                await cloudinary.v2.uploader.destroy(image_id);
+            }
+            
             const result = await cloudinary.v2.uploader.upload(req.body.avatar, {
                 folder: 'avatars',
                 width: 150,
@@ -575,9 +579,11 @@ exports.deleteUser = async (req, res, next) => {
         // return next(new ErrorHandler(`User does not found with id: ${req.params.id}`))
     }
 
-    // Remove avatar from cloudinary
-    const image_id = user.avatar.public_id;
-    await cloudinary.v2.uploader.destroy(image_id);
+    // Remove avatar from cloudinary if it exists
+    if (user.avatar && user.avatar.public_id) {
+        const image_id = user.avatar.public_id;
+        await cloudinary.v2.uploader.destroy(image_id);
+    }
     await User.findByIdAndDelete(req.params.id);
     return res.status(200).json({
         success: true,

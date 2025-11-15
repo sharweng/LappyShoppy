@@ -40,11 +40,11 @@ const passwordSchema = yup.object().shape({
 });
 
 const Profile = () => {
-  const { currentUser, updateUserPassword } = useAuth();
+  const { currentUser, updateUserPassword, triggerProfileUpdate } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
   const [isAdmin, setIsAdmin] = useState(false);
   const [userData, setUserData] = useState(null);
-  const [isOAuthUser, setIsOAuthUser] = useState(false);
+  const [isOAuthUser, setIsOAuthUser] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
 
@@ -71,7 +71,15 @@ const Profile = () => {
 
   useEffect(() => {
     if (currentUser) {
-      // Check if user is admin and fetch MongoDB user data
+      // Check if user is OAuth user immediately from Firebase provider data
+      const providers = currentUser.providerData || [];
+      const isOAuth = providers.some(provider => 
+        provider.providerId === 'google.com' || 
+        provider.providerId === 'facebook.com'
+      );
+      setIsOAuthUser(isOAuth);
+      
+      // Then fetch additional MongoDB user data
       const fetchUserData = async () => {
         try {
           const token = await currentUser.getIdToken();
@@ -84,13 +92,12 @@ const Profile = () => {
           setIsAdmin(data.user.role === 'admin');
           setUserData(data.user);
           
-          // Check if user is OAuth user by checking Firebase provider data
-          const providers = currentUser.providerData || [];
-          const isOAuth = providers.some(provider => 
+          // Update OAuth status if needed (though it should be the same)
+          const updatedIsOAuth = providers.some(provider => 
             provider.providerId === 'google.com' || 
             provider.providerId === 'facebook.com'
           );
-          setIsOAuthUser(isOAuth);
+          setIsOAuthUser(updatedIsOAuth);
           
           // Set profile form values
           profileForm.reset({
@@ -215,8 +222,8 @@ const Profile = () => {
         setSelectedImage(null);
         setPreviewImage(null);
         
-        // Force reload the page to update navbar
-        window.location.reload();
+        // Trigger navbar update
+        triggerProfileUpdate();
         
         toast.success('Profile updated successfully!');
       }
@@ -270,7 +277,10 @@ const Profile = () => {
                   />
                 ) : (
                   <div className="w-24 h-24 bg-blue-400 rounded-full border-4 border-white flex items-center justify-center text-white text-3xl font-bold">
-                    {currentUser?.displayName?.charAt(0).toUpperCase() || currentUser?.email?.charAt(0).toUpperCase()}
+                    {userData?.name?.charAt(0).toUpperCase() || 
+                     currentUser?.displayName?.charAt(0).toUpperCase() || 
+                     currentUser?.email?.charAt(0).toUpperCase() || 
+                     '?'}
                   </div>
                 )}
               </div>
@@ -296,7 +306,7 @@ const Profile = () => {
               >
                 Profile Information
               </button>
-              {!isOAuthUser && (
+              {isOAuthUser === false && (
                 <button
                   onClick={() => setActiveTab('password')}
                   className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
@@ -330,8 +340,11 @@ const Profile = () => {
                             className="w-24 h-24 rounded-full object-cover"
                           />
                         ) : (
-                          <div className="w-24 h-24 bg-gray-300 rounded-full flex items-center justify-center text-gray-600 text-3xl font-bold">
-                            {currentUser?.displayName?.charAt(0).toUpperCase() || '?'}
+                          <div className="w-24 h-24 bg-blue-400 rounded-full flex items-center justify-center text-white text-3xl font-bold">
+                            {userData?.name?.charAt(0).toUpperCase() || 
+                             currentUser?.displayName?.charAt(0).toUpperCase() || 
+                             currentUser?.email?.charAt(0).toUpperCase() || 
+                             '?'}
                           </div>
                         )}
                       </div>
@@ -402,7 +415,7 @@ const Profile = () => {
                       )}
                     </div>
 
-                    {!isOAuthUser && (
+                    {isOAuthUser === false && (
                       <div>
                         <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                           Email Address
