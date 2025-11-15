@@ -1,0 +1,46 @@
+Required Image Filenames (24 total)
+====================================
+
+Place your laptop images in this directory with these exact names:
+
+Business Laptops (7):
+--------------------
+dell-xps-15.jpg
+macbook-pro-14.jpg
+lenovo-thinkpad-x1.jpg
+msi-creator-z16.jpg
+dell-latitude-7430.jpg
+macbook-air-m2.jpg
+dell-xps-13-plus.jpg
+
+Gaming Laptops (8):
+-------------------
+hp-pavilion-gaming.jpg
+asus-rog-strix.jpg
+razer-blade-15.jpg
+lenovo-legion-5.jpg
+acer-predator-helios.jpg
+asus-tuf-gaming.jpg
+msi-katana-gf66.jpg
+gigabyte-aorus-15.jpg
+
+Chromebooks (4):
+----------------
+acer-chromebook-spin.jpg
+asus-chromebook-flip.jpg
+hp-chromebook-x360.jpg
+samsung-chromebook-2.jpg
+
+Convertible Laptops (5):
+------------------------
+surface-laptop-5.jpg
+hp-envy-x360.jpg
+lenovo-yoga-9i.jpg
+asus-zenbook-flip.jpg
+lenovo-thinkpad-yoga.jpg
+
+====================================
+Total: 24 image files needed
+
+Supported formats: .jpg, .jpeg, .png, .webp
+Recommended size: 800x600 or higher
