@@ -10,6 +10,7 @@ import axios from 'axios';
 const Register = () => {
   const [formData, setFormData] = useState({
     name: '',
+    username: '',
     email: '',
     password: '',
     confirmPassword: ''
@@ -22,7 +23,7 @@ const Register = () => {
   const { signup, signInWithGoogle, signInWithFacebook, logout } = useAuth();
   const navigate = useNavigate();
 
-  const { name, email, password, confirmPassword } = formData;
+  const { name, username, email, password, confirmPassword } = formData;
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -40,6 +41,18 @@ const Register = () => {
       newErrors.name = 'Name is required';
     } else if (name.trim().length < 2) {
       newErrors.name = 'Name must be at least 2 characters';
+    }
+
+    if (!username.trim()) {
+      newErrors.username = 'Username is required';
+    } else if (username.trim().length < 3) {
+      newErrors.username = 'Username must be at least 3 characters';
+    } else if (username.trim().length > 20) {
+      newErrors.username = 'Username cannot exceed 20 characters';
+    } else if (/\s/.test(username)) {
+      newErrors.username = 'Username cannot contain spaces';
+    } else if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      newErrors.username = 'Username can only contain letters, numbers, and underscores';
     }
 
     if (!email.trim()) {
@@ -85,6 +98,7 @@ const Register = () => {
       try {
         await axios.post('http://localhost:4001/api/v1/register', {
           name,
+          username,
           email,
           firebaseUid: firebaseUser.uid,
           // No password - Firebase handles authentication
@@ -100,9 +114,12 @@ const Register = () => {
     } catch (error) {
       console.error('Registration error:', error);
       if (error.code === 'auth/email-already-in-use') {
-        setErrors({ ...errors, email: 'This email is already in use' });
+        setErrors({ ...errors, email: 'Email already in use' });
         toast.error('Email already in use');
-      } else if (error.code === 'auth/invalid-email') {
+      } else if (error.response?.data?.message === 'Username already taken. Please choose another one.') {
+        setErrors({ ...errors, username: 'Username already taken' });
+        toast.error('Username already taken. Please choose another one.');
+      } else if (error.code === 'auth/weak-password') {
         setErrors({ ...errors, email: 'Invalid email address' });
         toast.error('Invalid email address');
       } else if (error.code === 'auth/weak-password') {
@@ -299,6 +316,31 @@ const Register = () => {
               </div>
               {errors.name && (
                 <p className="mt-1 text-sm text-red-600">{errors.name}</p>
+              )}
+            </div>
+            <div>
+              <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+                Username
+              </label>
+              <div className="mt-1 relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <User className={`h-5 w-5 ${errors.username ? 'text-red-400' : 'text-gray-400'}`} />
+                </div>
+                <input
+                  id="username"
+                  name="username"
+                  type="text"
+                  required
+                  className={`appearance-none block w-full pl-10 pr-3 py-2 border ${
+                    errors.username ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                  } placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:z-10 sm:text-sm`}
+                  placeholder="johndoe123"
+                  value={username}
+                  onChange={handleChange}
+                />
+              </div>
+              {errors.username && (
+                <p className="mt-1 text-sm text-red-600">{errors.username}</p>
               )}
             </div>
             <div>

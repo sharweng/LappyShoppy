@@ -10,9 +10,12 @@ const Profile = () => {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
   const [isAdmin, setIsAdmin] = useState(false);
+  const [userData, setUserData] = useState(null); // Store MongoDB user data
+  const [isOAuthUser, setIsOAuthUser] = useState(false); // Track if user is OAuth user
   
   const [profileData, setProfileData] = useState({
     displayName: '',
+    username: '',
     email: '',
     photoURL: ''
   });
@@ -27,14 +30,8 @@ const Profile = () => {
 
   useEffect(() => {
     if (currentUser) {
-      setProfileData({
-        displayName: currentUser.displayName || '',
-        email: currentUser.email || '',
-        photoURL: currentUser.photoURL || ''
-      });
-
-      // Check if user is admin
-      const checkAdminStatus = async () => {
+      // Check if user is admin and fetch MongoDB user data
+      const fetchUserData = async () => {
         try {
           const token = await currentUser.getIdToken();
           const config = {
@@ -44,12 +41,37 @@ const Profile = () => {
           };
           const { data } = await axios.get('http://localhost:4001/api/v1/me', config);
           setIsAdmin(data.user.role === 'admin');
+          setUserData(data.user);
+          
+          // Check if user is OAuth user by checking Firebase provider data
+          // OAuth users sign in with Google/Facebook, regular users sign in with email/password
+          const providers = currentUser.providerData || [];
+          const isOAuth = providers.some(provider => 
+            provider.providerId === 'google.com' || 
+            provider.providerId === 'facebook.com'
+          );
+          setIsOAuthUser(isOAuth);
+          
+          // Set profile data with MongoDB user data
+          setProfileData({
+            displayName: currentUser.displayName || '',
+            username: data.user.username || '',
+            email: currentUser.email || '',
+            photoURL: currentUser.photoURL || data.user.avatar?.url || ''
+          });
         } catch (error) {
-          console.error('Error checking admin status:', error);
+          console.error('Error fetching user data:', error);
+          // Fallback to Firebase data only
+          setProfileData({
+            displayName: currentUser.displayName || '',
+            username: '',
+            email: currentUser.email || '',
+            photoURL: currentUser.photoURL || ''
+          });
         }
       };
 
-      checkAdminStatus();
+      fetchUserData();
     }
   }, [currentUser]);
 
@@ -118,6 +140,30 @@ const Profile = () => {
     setLoading(true);
 
     try {
+      // Validate username if changed
+      if (profileData.username !== userData?.username) {
+        if (profileData.username.length < 3) {
+          toast.error('Username must be at least 3 characters');
+          setLoading(false);
+          return;
+        }
+        if (profileData.username.length > 20) {
+          toast.error('Username cannot exceed 20 characters');
+          setLoading(false);
+          return;
+        }
+        if (/\s/.test(profileData.username)) {
+          toast.error('Username cannot contain spaces');
+          setLoading(false);
+          return;
+        }
+        if (!/^[a-zA-Z0-9_]+$/.test(profileData.username)) {
+          toast.error('Username can only contain letters, numbers, and underscores');
+          setLoading(false);
+          return;
+        }
+      }
+
       let photoURL = profileData.photoURL;
 
       // Upload new image if selected
@@ -132,10 +178,44 @@ const Profile = () => {
         photoURL: photoURL
       });
 
-      setProfileData({ ...profileData, photoURL });
-      setSelectedImage(null);
-      setPreviewImage(null);
-      toast.success('Profile updated successfully!');
+      // Update MongoDB profile (including username)
+      const token = await currentUser.getIdToken();
+      const updateData = {
+        name: profileData.displayName,
+        username: profileData.username
+      };
+      
+      // Only include avatar if it's a new base64 image upload
+      if (selectedImage && photoURL.startsWith('http')) {
+        updateData.avatar = photoURL;
+      }
+
+      const response = await axios.put(
+        'http://localhost:4001/api/v1/me/update',
+        updateData,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (response.data.success) {
+        setUserData(response.data.user);
+        setProfileData({ 
+          ...profileData, 
+          photoURL,
+          username: response.data.user.username 
+        });
+        setSelectedImage(null);
+        setPreviewImage(null);
+        
+        // Force reload the page to update navbar
+        window.location.reload();
+        
+        toast.success('Profile updated successfully!');
+      }
     } catch (error) {
       console.error('Profile update error:', error);
       const errorMessage = error.response?.data?.message || error.message || 'Failed to update profile';
@@ -217,16 +297,18 @@ const Profile = () => {
               >
                 Profile Information
               </button>
-              <button
-                onClick={() => setActiveTab('password')}
-                className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === 'password'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                Change Password
-              </button>
+              {!isOAuthUser && (
+                <button
+                  onClick={() => setActiveTab('password')}
+                  className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
+                    activeTab === 'password'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  Change Password
+                </button>
+              )}
             </div>
           </div>
 
@@ -271,7 +353,7 @@ const Profile = () => {
                     </div>
                   </div>
 
-                  {/* Right: Display Name and Email */}
+                  {/* Right: Display Name, Username and Email */}
                   <div className="flex-1 space-y-4">
                     <div>
                       <label htmlFor="displayName" className="block text-sm font-medium text-gray-700">
@@ -288,21 +370,41 @@ const Profile = () => {
                     </div>
 
                     <div>
-                      <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                        Email Address
+                      <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+                        Username
                       </label>
                       <input
-                        type="email"
-                        id="email"
-                        name="email"
-                        value={profileData.email}
-                        disabled
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm bg-gray-100 cursor-not-allowed sm:text-sm"
+                        type="text"
+                        id="username"
+                        name="username"
+                        value={profileData.username}
+                        onChange={handleProfileChange}
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                        placeholder="johndoe123"
                       />
                       <p className="mt-1 text-xs text-gray-500">
-                        Email cannot be changed
+                        3-20 characters, no spaces, letters, numbers and underscores only
                       </p>
                     </div>
+
+                    {!isOAuthUser && (
+                      <div>
+                        <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                          Email Address
+                        </label>
+                        <input
+                          type="email"
+                          id="email"
+                          name="email"
+                          value={profileData.email}
+                          disabled
+                          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm bg-gray-100 cursor-not-allowed sm:text-sm"
+                        />
+                        <p className="mt-1 text-xs text-gray-500">
+                          Email cannot be changed
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
 

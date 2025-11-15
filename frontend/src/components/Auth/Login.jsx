@@ -33,9 +33,7 @@ const Login = () => {
     const newErrors = {};
 
     if (!email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = 'Please enter a valid email address';
+      newErrors.email = 'Email or username is required';
     }
 
     if (!password) {
@@ -57,11 +55,38 @@ const Login = () => {
     setLoading(true);
 
     try {
-      await login(email, password);
+      // If input is not an email, get the email from backend first
+      let loginEmail = email;
+      
+      if (!email.includes('@')) {
+        // It's a username, get the email from backend
+        try {
+          const axios = (await import('axios')).default;
+          const response = await axios.post('http://localhost:4001/api/v1/get-user-email', {
+            identifier: email
+          });
+          
+          if (response.data.success) {
+            loginEmail = response.data.email;
+          } else {
+            toast.error('Username not found');
+            setLoading(false);
+            return;
+          }
+        } catch (error) {
+          console.error('Error getting email:', error);
+          toast.error('Username not found');
+          setLoading(false);
+          return;
+        }
+      }
+      
+      // Now login with email
+      await login(loginEmail, password);
       toast.success('Login successful!');
       
       // Check if user is admin and redirect accordingly
-      if (email === 'admin@lappyshoppy.com') {
+      if (loginEmail === 'admin@lappyshoppy.com') {
         navigate('/admin/dashboard');
       } else {
         navigate('/');
@@ -78,8 +103,8 @@ const Login = () => {
         setErrors({ ...errors, email: 'Invalid email address' });
         toast.error('Invalid email address');
       } else if (error.code === 'auth/invalid-credential') {
-        setErrors({ email: 'Invalid email or password', password: 'Invalid email or password' });
-        toast.error('Invalid email or password');
+        setErrors({ email: 'Invalid email/username or password', password: 'Invalid email/username or password' });
+        toast.error('Invalid email/username or password');
       } else {
         toast.error('Login failed. Please try again.');
       }
@@ -234,7 +259,7 @@ const Login = () => {
           <div className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email Address
+                Email or Username
               </label>
               <div className="mt-1 relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -243,13 +268,13 @@ const Login = () => {
                 <input
                   id="email"
                   name="email"
-                  type="email"
+                  type="text"
                   autoComplete="email"
                   required
                   className={`appearance-none block w-full pl-10 pr-3 py-2 border ${
                     errors.email ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
                   } placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:z-10 sm:text-sm`}
-                  placeholder="john@example.com"
+                  placeholder="john@example.com or johndoe"
                   value={email}
                   onChange={handleChange}
                 />

@@ -10,6 +10,22 @@ const userSchema = new mongoose.Schema({
         required: [true, 'Please enter your name'],
         maxLength: [30, 'Your name cannot exceed 30 characters']
     },
+    username: {
+        type: String,
+        required: [true, 'Please enter a username'],
+        unique: true,
+        trim: true,
+        lowercase: true,
+        minLength: [3, 'Username must be at least 3 characters'],
+        maxLength: [20, 'Username cannot exceed 20 characters'],
+        validate: {
+            validator: function(v) {
+                // No spaces allowed in username
+                return /^\S+$/.test(v);
+            },
+            message: 'Username cannot contain spaces'
+        }
+    },
     email: {
         type: String,
         required: false, // Optional since Firebase handles auth

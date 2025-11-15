@@ -2,6 +2,8 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { Laptop, Home, LogOut, ShoppingCart, Package } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import axios from 'axios';
 
 const Navbar = () => {
   const { currentUser, logout } = useAuth();
@@ -9,10 +11,31 @@ const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const cartCount = getCartCount();
+  const [userData, setUserData] = useState(null);
 
   // Treat user as not logged in on auth pages
   const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
   const displayUser = isAuthPage ? null : currentUser;
+
+  // Fetch MongoDB user data to get username
+  useEffect(() => {
+    if (currentUser && !isAuthPage) {
+      const fetchUserData = async () => {
+        try {
+          const token = await currentUser.getIdToken();
+          const { data } = await axios.get('http://localhost:4001/api/v1/me', {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          setUserData(data.user);
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+        }
+      };
+      fetchUserData();
+    }
+  }, [currentUser, isAuthPage]);
 
   const handleLogout = async () => {
     try {
@@ -81,11 +104,11 @@ const Navbar = () => {
                     />
                   ) : (
                     <div className="w-8 h-8 bg-blue-400 rounded-full flex items-center justify-center text-white font-semibold border-2 border-white">
-                      {displayUser.displayName?.charAt(0).toUpperCase() || displayUser.email?.charAt(0).toUpperCase()}
+                      {userData?.name?.charAt(0).toUpperCase() || displayUser.displayName?.charAt(0).toUpperCase() || displayUser.email?.charAt(0).toUpperCase()}
                     </div>
                   )}
                   <span className="text-sm font-medium">
-                    {displayUser.displayName?.split(' ')[0] || displayUser.email?.split('@')[0]}
+                    {userData?.username || displayUser.displayName?.split(' ')[0] || displayUser.email?.split('@')[0]}
                   </span>
                 </Link>
                 <button
