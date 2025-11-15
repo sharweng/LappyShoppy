@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import AdminLayout from './AdminLayout';
 import { 
   Users, 
   ShoppingBag, 
   DollarSign, 
-  Package
+  Package,
+  Download
 } from 'lucide-react';
 import { 
   LineChart, 
@@ -15,9 +16,11 @@ import {
   CartesianGrid, 
   Tooltip, 
   Legend, 
-  ResponsiveContainer 
+  ResponsiveContainer,
+  LabelList
 } from 'recharts';
 import axios from 'axios';
+import html2canvas from 'html2canvas';
 
 // Format large numbers with K/M notation
 const formatNumber = (value) => {
@@ -30,8 +33,36 @@ const formatNumber = (value) => {
   return value;
 };
 
+const downloadChart = async (chartRef, filename) => {
+  if (!chartRef.current) return;
+  
+  // Hide control elements temporarily
+  const controls = chartRef.current.querySelectorAll('.chart-controls');
+  controls.forEach(el => el.style.display = 'none');
+  
+  try {
+    const canvas = await html2canvas(chartRef.current, {
+      backgroundColor: '#ffffff',
+      scale: 2, // Higher resolution
+      useCORS: true,
+      allowTaint: false
+    });
+    const link = document.createElement('a');
+    link.download = filename;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  } catch (error) {
+    console.error('Error downloading chart:', error);
+  } finally {
+    // Show controls again
+    controls.forEach(el => el.style.display = '');
+  }
+};
+
 const Dashboard = () => {
   const { currentUser } = useAuth();
+  const monthlyChartRef = useRef();
+  const salesOverviewChartRef = useRef();
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalProducts: 0,
@@ -282,104 +313,24 @@ const Dashboard = () => {
         </div>
 
         {/* Monthly Sales Chart */}
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
-            <h2 className="text-xl font-bold text-gray-900">Monthly Sales ({selectedYear})</h2>
-            <div className="flex gap-2">
-              <select
-                value={selectedYear}
-                onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                className="px-3 py-1 text-sm border border-gray-300 rounded-lg bg-white"
-              >
-                {yearOptions.map(year => (
-                  <option key={year} value={year}>{year}</option>
-                ))}
-              </select>
-              <button
-                onClick={() => setMonthlyTab('money')}
-                className={`px-3 py-1 text-sm rounded-lg transition-colors ${
-                  monthlyTab === 'money'
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                Money
-              </button>
-              <button
-                onClick={() => setMonthlyTab('products')}
-                className={`px-3 py-1 text-sm rounded-lg transition-colors ${
-                  monthlyTab === 'products'
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                Products
-              </button>
-            </div>
-          </div>
-          {monthlySalesData.length > 0 || monthlyProductsData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={monthlyTab === 'money' ? monthlySalesData : monthlyProductsData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis tickFormatter={formatNumber} />
-                <Tooltip 
-                  formatter={(value) => monthlyTab === 'money' ? `$${value.toLocaleString()}` : `${value} units`} 
-                />
-                <Legend />
-                <Line 
-                  type="linear" 
-                  dataKey={monthlyTab === 'money' ? 'total' : 'totalQuantity'} 
-                  stroke={monthlyTab === 'money' ? '#8b5cf6' : '#10b981'}
-                  strokeWidth={2}
-                  dot={{ r: 4 }}
-                  activeDot={{ r: 6 }}
-                  name={monthlyTab === 'money' ? 'Sales' : 'Products'}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="h-80 flex items-center justify-center text-gray-500">
-              No monthly data available
-            </div>
-          )}
-        </div>
-
-        {/* Sales Chart with Custom Date Range Filter */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
-            <h2 className="text-xl font-bold text-gray-900">Sales Overview</h2>
-            <div className="flex flex-col sm:flex-row gap-2">
-              
-              <div className="flex gap-1">
-                <label className="text-sm text-gray-700 self-center">From:</label>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="px-2 py-1 border border-gray-300 rounded-lg text-sm"
-                />
-              </div>
-              <div className="flex gap-1">
-                <label className="text-sm text-gray-700 self-center">To:</label>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="px-2 py-1 border border-gray-300 rounded-lg text-sm"
-                />
-              </div>
-              <button
-                onClick={handleDateRangeChange}
-                className="px-4 py-1 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition-colors"
-              >
-                Filter
-              </button>
-              <div className="flex gap-2">
+        <div ref={monthlyChartRef} className="bg-white rounded-lg shadow p-6 mb-6">
+          <div style={{ padding: '20px' }}>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
+              <h2 className="text-xl font-bold text-gray-900">Monthly Sales ({selectedYear})</h2>
+              <div className="flex gap-2 chart-controls">
+                <select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                  className="px-3 py-1 text-sm border border-gray-300 rounded-lg bg-white"
+                >
+                  {yearOptions.map(year => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
                 <button
-                  onClick={() => setSaleOverviewTab('money')}
+                  onClick={() => setMonthlyTab('money')}
                   className={`px-3 py-1 text-sm rounded-lg transition-colors ${
-                    saleOverviewTab === 'money'
+                    monthlyTab === 'money'
                       ? 'bg-blue-500 text-white'
                       : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                   }`}
@@ -387,54 +338,166 @@ const Dashboard = () => {
                   Money
                 </button>
                 <button
-                  onClick={() => setSaleOverviewTab('products')}
+                  onClick={() => setMonthlyTab('products')}
                   className={`px-3 py-1 text-sm rounded-lg transition-colors ${
-                    saleOverviewTab === 'products'
+                    monthlyTab === 'products'
                       ? 'bg-blue-500 text-white'
                       : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                   }`}
                 >
                   Products
                 </button>
+                <button
+                  onClick={() => downloadChart(monthlyChartRef, `monthly-sales-${monthlyTab}-${selectedYear}.png`)}
+                  className="px-3 py-1 text-sm bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center gap-1"
+                >
+                  <Download className="w-4 h-4" /> Download PNG
+                </button>
               </div>
             </div>
+            {monthlySalesData.length > 0 || monthlyProductsData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={monthlyTab === 'money' ? monthlySalesData : monthlyProductsData} margin={{ top: 40, right: 30, bottom: 5, left: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis tickFormatter={formatNumber} />
+                  <Tooltip 
+                    formatter={(value) => monthlyTab === 'money' ? `$${value.toLocaleString()}` : `${value} units`} 
+                  />
+                  <Legend />
+                  <Line 
+                    type="linear" 
+                    dataKey={monthlyTab === 'money' ? 'total' : 'totalQuantity'} 
+                    stroke={monthlyTab === 'money' ? '#8b5cf6' : '#10b981'}
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
+                    activeDot={{ r: 6 }}
+                    name={monthlyTab === 'money' ? 'Sales' : 'Products'}
+                  >
+                    <LabelList 
+                      dataKey={monthlyTab === 'money' ? 'total' : 'totalQuantity'} 
+                      position="top" 
+                      offset={10}
+                      formatter={(value) => monthlyTab === 'money' ? `$${value.toLocaleString()}` : `${value}`}
+                      style={{ fontSize: '12px', fill: '#333' }}
+                    />
+                  </Line>
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-80 flex items-center justify-center text-gray-500">
+                No monthly data available
+              </div>
+            )}
           </div>
-          {loadingCharts ? (
-            <div className="h-96 flex items-center justify-center text-gray-500">
-              Loading chart data...
+        </div>
+
+        {/* Sales Chart with Custom Date Range Filter */}
+        <div ref={salesOverviewChartRef} className="bg-white rounded-lg shadow p-6">
+          <div style={{ padding: '20px' }}>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
+              <h2 className="text-xl font-bold text-gray-900">Sales Overview</h2>
+              <div className="flex flex-col sm:flex-row gap-2">
+                
+                <div className="flex gap-1 chart-controls">
+                  <label className="text-sm text-gray-700 self-center">From:</label>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="px-2 py-1 border border-gray-300 rounded-lg text-sm"
+                  />
+                </div>
+                <div className="flex gap-1 chart-controls">
+                  <label className="text-sm text-gray-700 self-center">To:</label>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="px-2 py-1 border border-gray-300 rounded-lg text-sm"
+                  />
+                </div>
+                <button
+                  onClick={handleDateRangeChange}
+                  className="px-4 py-1 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition-colors chart-controls"
+                >
+                  Filter
+                </button>
+                <div className="flex gap-2 chart-controls">
+                  <button
+                    onClick={() => setSaleOverviewTab('money')}
+                    className={`px-3 py-1 text-sm rounded-lg transition-colors ${
+                      saleOverviewTab === 'money'
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    Money
+                  </button>
+                  <button
+                    onClick={() => setSaleOverviewTab('products')}
+                    className={`px-3 py-1 text-sm rounded-lg transition-colors ${
+                      saleOverviewTab === 'products'
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    Products
+                  </button>
+                  <button
+                    onClick={() => downloadChart(salesOverviewChartRef, `sales-overview-${saleOverviewTab}-${startDate}-to-${endDate}.png`)}
+                    className="px-3 py-1 text-sm bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center gap-1"
+                  >
+                    <Download className="w-4 h-4" /> Download PNG
+                  </button>
+                </div>
+              </div>
             </div>
-          ) : (saleOverviewTab === 'money' ? salesData.length > 0 : productsData.length > 0) ? (
-            <ResponsiveContainer width="100%" height={350}>
-              <LineChart data={saleOverviewTab === 'money' ? salesData : productsData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="displayDate" 
-                  angle={-45} 
-                  textAnchor="end" 
-                  height={80}
-                  fontSize={12}
-                />
-                <YAxis tickFormatter={formatNumber} />
-                <Tooltip 
-                  formatter={(value) => saleOverviewTab === 'money' ? `$${value.toLocaleString()}` : `${value} units`} 
-                />
-                <Legend />
-                <Line 
-                  type="linear" 
-                  dataKey={saleOverviewTab === 'money' ? 'sales' : 'totalQuantity'} 
-                  stroke={saleOverviewTab === 'money' ? '#3b82f6' : '#10b981'}
-                  strokeWidth={2}
-                  dot={{ r: 3 }}
-                  activeDot={{ r: 5 }}
-                  name={saleOverviewTab === 'money' ? 'Sales' : 'Products'}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="h-96 flex items-center justify-center text-gray-500">
-              No sales data available for this date range
-            </div>
-          )}
+            {loadingCharts ? (
+              <div className="h-96 flex items-center justify-center text-gray-500">
+                Loading chart data...
+              </div>
+            ) : (saleOverviewTab === 'money' ? salesData.length > 0 : productsData.length > 0) ? (
+              <ResponsiveContainer width="100%" height={350}>
+                <LineChart data={saleOverviewTab === 'money' ? salesData : productsData} margin={{ top: 40, right: 30, bottom: 5, left: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="displayDate" 
+                    angle={-45} 
+                    textAnchor="end" 
+                    height={80}
+                    fontSize={12}
+                  />
+                  <YAxis tickFormatter={formatNumber} />
+                  <Tooltip 
+                    formatter={(value) => saleOverviewTab === 'money' ? `$${value.toLocaleString()}` : `${value} units`} 
+                  />
+                  <Legend />
+                  <Line 
+                    type="linear" 
+                    dataKey={saleOverviewTab === 'money' ? 'sales' : 'totalQuantity'} 
+                    stroke={saleOverviewTab === 'money' ? '#3b82f6' : '#10b981'}
+                    strokeWidth={2}
+                    dot={{ r: 3 }}
+                    activeDot={{ r: 5 }}
+                    name={saleOverviewTab === 'money' ? 'Sales' : 'Products'}
+                  >
+                    <LabelList 
+                      dataKey={saleOverviewTab === 'money' ? 'sales' : 'totalQuantity'} 
+                      position="top" 
+                      offset={10}
+                      formatter={(value) => saleOverviewTab === 'money' ? `$${value.toLocaleString()}` : `${value}`}
+                      style={{ fontSize: '10px', fill: '#333' }}
+                    />
+                  </Line>
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-96 flex items-center justify-center text-gray-500">
+                No sales data available for this date range
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </AdminLayout>
