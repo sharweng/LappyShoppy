@@ -216,7 +216,11 @@ const MyOrders = () => {
                   {/* Order Items Preview */}
                   <div className="space-y-3 mb-4">
                     {order.orderItems.slice(0, 2).map((item, index) => (
-                      <div key={index} className="flex gap-3">
+                      <div 
+                        key={index} 
+                        onClick={() => navigate(`/product/${item.product}`)}
+                        className="flex gap-3 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition duration-200"
+                      >
                         <div className="w-16 h-16 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden">
                           {item.image ? (
                             <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
@@ -227,7 +231,7 @@ const MyOrders = () => {
                           )}
                         </div>
                         <div className="flex-1">
-                          <h3 className="font-medium text-gray-900 text-sm">{item.name}</h3>
+                          <h3 className="font-medium text-gray-900 text-sm hover:text-blue-600 transition duration-200">{item.name}</h3>
                           <p className="text-xs text-gray-600">Qty: {item.quantity}</p>
                         </div>
                         <div className="text-right">

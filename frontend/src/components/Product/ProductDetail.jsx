@@ -18,7 +18,10 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Edit,
+  Trash2,
+  MessageSquare
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 
@@ -37,10 +40,72 @@ const ProductDetail = () => {
   const [addingToCart, setAddingToCart] = useState(false);
   const [imageTransition, setImageTransition] = useState('');
   const [showSpecs, setShowSpecs] = useState(false);
+  const [reviews, setReviews] = useState([]);
+  const [canReview, setCanReview] = useState(false);
+  const [hasReview, setHasReview] = useState(false);
+  const [userReview, setUserReview] = useState(null);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [editingReview, setEditingReview] = useState(false);
+  const [isAnonymous, setIsAnonymous] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [reviewToDelete, setReviewToDelete] = useState(null);
+  const [reviewFilter, setReviewFilter] = useState('all');
 
   useEffect(() => {
     fetchProduct();
   }, [id]);
+
+  useEffect(() => {
+    if (product && currentUser) {
+      checkReviewEligibility();
+      fetchReviews();
+    } else if (product) {
+      fetchReviewsPublic();
+    }
+  }, [product, currentUser]);
+
+  // Helper to check if a review belongs to the current user
+  const isCurrentUserReview = (review) => {
+    if (!currentUser || !userReview) return false;
+    return review._id === userReview._id;
+  };
+
+  // Helper to format anonymous name
+  const formatAnonymousName = (name) => {
+    if (!name || name.length === 0) return 'Anonymous';
+    if (name.length === 1) return name;
+    const firstLetter = name.charAt(0);
+    const lastLetter = name.charAt(name.length - 1);
+    return `${firstLetter}*****${lastLetter}`;
+  };
+
+  // Helper to sort and filter reviews
+  const getSortedAndFilteredReviews = () => {
+    let sortedReviews = [...reviews];
+
+    // Filter reviews
+    if (reviewFilter === 'with-comments') {
+      sortedReviews = sortedReviews.filter(review => review.comment && review.comment.trim().length > 0);
+    }
+
+    // Sort: User's review first, then by date (newest first)
+    sortedReviews.sort((a, b) => {
+      const aIsUserReview = isCurrentUserReview(a);
+      const bIsUserReview = isCurrentUserReview(b);
+
+      // User's review always comes first
+      if (aIsUserReview && !bIsUserReview) return -1;
+      if (!aIsUserReview && bIsUserReview) return 1;
+
+      // Otherwise sort by date (newest first)
+      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+    });
+
+    return sortedReviews;
+  };
 
   const fetchProduct = async () => {
     try {
@@ -54,6 +119,144 @@ const ProductDetail = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const checkReviewEligibility = async () => {
+    try {
+      const token = await currentUser.getIdToken();
+      const config = {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      };
+
+      const { data } = await axios.get(`${API_URL}/review/can-review?productId=${id}`, config);
+      setCanReview(data.canReview);
+      setHasReview(data.hasReview);
+      if (data.hasReview && data.review) {
+        setUserReview(data.review);
+        setReviewRating(data.review.rating);
+        setReviewComment(data.review.comment || '');
+        setIsAnonymous(data.review.isAnonymous || false);
+      }
+    } catch (err) {
+      console.error('Error checking review eligibility:', err);
+    }
+  };
+
+  const fetchReviews = async () => {
+    try {
+      if (currentUser) {
+        const token = await currentUser.getIdToken();
+        const config = {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        };
+        const { data } = await axios.get(`${API_URL}/reviews?id=${id}`, config);
+        setReviews(data.reviews);
+      } else {
+        const { data } = await axios.get(`${API_URL}/reviews?id=${id}`);
+        setReviews(data.reviews);
+      }
+    } catch (err) {
+      console.error('Error fetching reviews:', err);
+      setReviews([]);
+    }
+  };
+
+  const fetchReviewsPublic = async () => {
+    try {
+      const { data } = await axios.get(`${API_URL}/reviews?id=${id}`);
+      setReviews(data.reviews);
+    } catch (err) {
+      console.error('Error fetching reviews:', err);
+      setReviews([]);
+    }
+  };
+
+  const handleSubmitReview = async (e) => {
+    e.preventDefault();
+    if (!currentUser) {
+      toast.info('Please login to submit a review');
+      navigate('/login');
+      return;
+    }
+
+    setSubmittingReview(true);
+    try {
+      const token = await currentUser.getIdToken();
+      const config = {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      };
+
+      await axios.put(`${API_URL}/review`, {
+        rating: reviewRating,
+        comment: reviewComment.trim(),
+        productId: id,
+        isAnonymous: isAnonymous
+      }, config);
+
+      toast.success(editingReview ? 'Review updated successfully' : 'Review submitted successfully');
+      setShowReviewForm(false);
+      setEditingReview(false);
+      
+      // Refresh product and reviews
+      await fetchProduct();
+      await checkReviewEligibility();
+      await fetchReviews();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to submit review');
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
+
+  const handleDeleteReview = async () => {
+    if (!reviewToDelete) return;
+
+    try {
+      const token = await currentUser.getIdToken();
+      const config = {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      };
+
+      await axios.delete(`${API_URL}/reviews?id=${reviewToDelete}&productId=${id}`, config);
+      toast.success('Review deleted successfully');
+      
+      // Reset review form
+      setReviewRating(5);
+      setReviewComment('');
+      setIsAnonymous(false);
+      setEditingReview(false);
+      setShowReviewForm(false);
+      setShowDeleteModal(false);
+      setReviewToDelete(null);
+      
+      // Refresh product and reviews
+      await fetchProduct();
+      await checkReviewEligibility();
+      await fetchReviews();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete review');
+      setShowDeleteModal(false);
+      setReviewToDelete(null);
+    }
+  };
+
+  const openDeleteModal = (reviewId) => {
+    setReviewToDelete(reviewId);
+    setShowDeleteModal(true);
+  };
+
+  const handleEditReview = () => {
+    setEditingReview(true);
+    setShowReviewForm(true);
   };
 
   const handleQuantityChange = (change) => {
@@ -440,7 +643,240 @@ const ProductDetail = () => {
               </div>
             )}
           </div>
+
+          {/* Reviews Section */}
+          <div className="border-t bg-white p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-gray-900 flex items-center space-x-2">
+                <MessageSquare className="w-6 h-6 text-blue-600" />
+                <span>Customer Reviews</span>
+              </h2>
+              {currentUser && canReview && !hasReview && !showReviewForm && (
+                <button
+                  onClick={() => setShowReviewForm(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition duration-300"
+                >
+                  Write a Review
+                </button>
+              )}
+            </div>
+
+            {/* Review Form */}
+            {currentUser && showReviewForm && (
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <h3 className="text-base font-bold text-gray-900 mb-3">
+                  {editingReview ? 'Edit Your Review' : 'Write Your Review'}
+                </h3>
+                <form onSubmit={handleSubmitReview}>
+                  <div className="mb-3">
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Rating</label>
+                    <div className="flex space-x-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setReviewRating(star)}
+                          className="focus:outline-none transition-transform hover:scale-110"
+                        >
+                          <Star
+                            className={`w-6 h-6 ${
+                              star <= reviewRating
+                                ? 'fill-yellow-500 text-yellow-500'
+                                : 'text-gray-300'
+                            }`}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="mb-3">
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Comment (Optional)</label>
+                    <textarea
+                      value={reviewComment}
+                      onChange={(e) => setReviewComment(e.target.value)}
+                      rows="3"
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Share your experience with this product..."
+                    ></textarea>
+                  </div>
+                  <div className="mb-3">
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isAnonymous}
+                        onChange={(e) => setIsAnonymous(e.target.checked)}
+                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <span className="text-xs text-gray-700">Post as anonymous</span>
+                    </label>
+                  </div>
+                  <div className="flex space-x-2">
+                    <button
+                      type="submit"
+                      disabled={submittingReview}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 text-sm rounded-lg font-semibold transition duration-300 disabled:bg-gray-400"
+                    >
+                      {submittingReview ? 'Submitting...' : editingReview ? 'Update' : 'Submit'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowReviewForm(false);
+                        setEditingReview(false);
+                        if (!hasReview) {
+                          setReviewRating(5);
+                          setReviewComment('');
+                          setIsAnonymous(false);
+                        }
+                      }}
+                      className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-1.5 text-sm rounded-lg font-semibold transition duration-300"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {/* Review eligibility message */}
+            {currentUser && !canReview && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                <p className="text-sm text-yellow-800">
+                  You can only review products from delivered orders. Purchase this product and wait for delivery to leave a review.
+                </p>
+              </div>
+            )}
+
+            {/* Review Filters */}
+            {reviews.length > 0 && (
+              <div className="flex space-x-2 mb-6">
+                <button
+                  onClick={() => setReviewFilter('all')}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition duration-300 ${
+                    reviewFilter === 'all'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  All ({reviews.length})
+                </button>
+                <button
+                  onClick={() => setReviewFilter('with-comments')}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition duration-300 ${
+                    reviewFilter === 'with-comments'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  With Comments ({reviews.filter(r => r.comment && r.comment.trim().length > 0).length})
+                </button>
+              </div>
+            )}
+
+            {/* Reviews List */}
+            {reviews.length > 0 ? (
+              <div className="space-y-4">
+                {getSortedAndFilteredReviews().map((review) => {
+                  const isUserReview = isCurrentUserReview(review);
+                  const displayName = review.isAnonymous ? formatAnonymousName(review.name) : review.name;
+                  return (
+                    <div 
+                      key={review._id} 
+                      className={`rounded-lg p-4 ${
+                        isUserReview ? 'bg-blue-50 border-2 border-blue-200' : 'bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <div className="flex items-center space-x-2">
+                            <h4 className="font-semibold text-gray-900">{displayName}</h4>
+                            {isUserReview && (
+                              <span className="bg-blue-600 text-white text-xs px-2 py-0.5 rounded-full">
+                                Your Review
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center mt-1">
+                            {[...Array(5)].map((_, i) => (
+                              <Star
+                                key={i}
+                                className={`w-4 h-4 ${
+                                  i < review.rating
+                                    ? 'fill-yellow-500 text-yellow-500'
+                                    : 'text-gray-300'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                        {isUserReview && (
+                          <div className="flex space-x-2">
+                            <button
+                              onClick={handleEditReview}
+                              className="text-blue-600 hover:text-blue-800 p-1 rounded transition duration-300"
+                              title="Edit review"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => openDeleteModal(review._id)}
+                              className="text-red-600 hover:text-red-800 p-1 rounded transition duration-300"
+                              title="Delete review"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      {review.comment && (
+                        <p className="text-sm text-gray-700 leading-relaxed">{review.comment}</p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <MessageSquare className="w-16 h-16 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-600">No reviews yet. Be the first to review this product!</p>
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 animate-fadeIn">
+              <div className="text-center mb-6">
+                <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                  <Trash2 className="h-6 w-6 text-red-600" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">Delete Review</h3>
+                <p className="text-sm text-gray-600">
+                  Are you sure you want to delete this review? This action cannot be undone.
+                </p>
+              </div>
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setReviewToDelete(null);
+                  }}
+                  className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg font-semibold transition duration-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteReview}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-semibold transition duration-300"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

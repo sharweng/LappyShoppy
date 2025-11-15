@@ -178,7 +178,11 @@ const OrderDetail = () => {
             <h2 className="text-lg font-bold text-gray-900 mb-4">Order Items</h2>
             <div className="space-y-4">
               {order.orderItems.map((item, index) => (
-                <div key={index} className="flex gap-4 bg-gray-50 rounded-lg p-4">
+                <div 
+                  key={index} 
+                  onClick={() => navigate(`/product/${item.product}`)}
+                  className="flex gap-4 bg-gray-50 rounded-lg p-4 cursor-pointer hover:bg-gray-100 transition duration-200"
+                >
                   <div className="w-20 h-20 flex-shrink-0 bg-white rounded-lg overflow-hidden">
                     {item.image ? (
                       <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
@@ -189,7 +193,7 @@ const OrderDetail = () => {
                     )}
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900">{item.name}</h3>
+                    <h3 className="font-semibold text-gray-900 hover:text-blue-600 transition duration-200">{item.name}</h3>
                     <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
                     <p className="text-lg font-bold text-blue-600 mt-1">
                       ₱{item.price.toLocaleString('en-PH', { minimumFractionDigits: 2 })}

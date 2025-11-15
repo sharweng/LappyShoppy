@@ -15,6 +15,7 @@ const {
     deleteReview,
     bulkDeleteProducts,
     getFilterOptions,
+    checkUserCanReview,
     
     } = require('../controllers/product');
 
@@ -32,7 +33,8 @@ router.get('/products', getProducts)
 router.get('/products/filter-options', getFilterOptions);
 router.get('/admin/product-sales', productSales);
 router.put('/review', isAuthenticatedUser, createProductReview);
-router.get('/reviews',isAuthenticatedUser, getProductReviews)
-router.delete('/reviews', isAuthenticatedUser, authorizeRoles('admin'), deleteReview)
+router.get('/reviews', getProductReviews);
+router.get('/review/can-review', isAuthenticatedUser, checkUserCanReview);
+router.delete('/reviews', isAuthenticatedUser, deleteReview);
 
 module.exports = router

@@ -272,22 +272,47 @@ exports.productSales = async (req, res, next) => {
 }
 
 exports.createProductReview = async (req, res, next) => {
-	const { rating, comment, productId } = req.body;
+	const { rating, comment, productId, isAnonymous } = req.body;
+
+	// Check if user has a delivered order containing this product
+	const deliveredOrder = await Order.findOne({
+		user: req.user._id,
+		'orderItems.product': productId,
+		orderStatus: 'Delivered'
+	});
+
+	if (!deliveredOrder) {
+		return res.status(403).json({
+			success: false,
+			message: 'You can only review products from delivered orders'
+		})
+	}
+
 	const review = {
 		user: req.user._id,
 		name: req.user.name,
 		rating: Number(rating),
-		comment
+		comment: comment || '',
+		isAnonymous: isAnonymous || false
 	}
 	const product = await Product.findById(productId);
+	
+	if (!product) {
+		return res.status(404).json({
+			success: false,
+			message: 'Product not found'
+		})
+	}
+
 	const isReviewed = product.reviews.find(
 		r => r.user.toString() === req.user._id.toString()
 	)
 	if (isReviewed) {
 		product.reviews.forEach(review => {
 			if (review.user.toString() === req.user._id.toString()) {
-				review.comment = comment;
+				review.comment = comment || '';
 				review.rating = rating;
+				review.isAnonymous = isAnonymous || false;
 			}
 		})
 	} else {
@@ -302,25 +327,76 @@ exports.createProductReview = async (req, res, next) => {
 			message: 'review not posted'
 		})
 	return res.status(200).json({
-		success: true
+		success: true,
+		review: isReviewed ? product.reviews.find(r => r.user.toString() === req.user._id.toString()) : review
 	})
 }
 
 exports.getProductReviews = async (req, res, next) => {
     const product = await Product.findById(req.query.id);
+    
+    if (!product) {
+        return res.status(404).json({
+            success: false,
+            message: 'Product not found'
+        })
+    }
+
+    // Sort reviews with current user's review at the top (if authenticated)
+    let reviews = [...product.reviews];
+    if (req.user && req.user._id) {
+        reviews.sort((a, b) => {
+            const aIsCurrentUser = a.user.toString() === req.user._id.toString();
+            const bIsCurrentUser = b.user.toString() === req.user._id.toString();
+            
+            if (aIsCurrentUser && !bIsCurrentUser) return -1;
+            if (!aIsCurrentUser && bIsCurrentUser) return 1;
+            return 0;
+        });
+    }
+
     res.status(200).json({
         success: true,
-        reviews: product.reviews
+        reviews: reviews
     })
 }
 
 exports.deleteReview = async (req, res, next) => {
     console.log(req.query)
     const product = await Product.findById(req.query.productId);
+    
+    if (!product) {
+        return res.status(404).json({
+            success: false,
+            message: 'Product not found'
+        })
+    }
+
+    // Find the review to delete
+    const reviewToDelete = product.reviews.find(review => review._id.toString() === req.query.id.toString());
+    
+    if (!reviewToDelete) {
+        return res.status(404).json({
+            success: false,
+            message: 'Review not found'
+        })
+    }
+
+    // Check if user is admin or the review owner
+    const isAdmin = req.user.role === 'admin';
+    const isReviewOwner = reviewToDelete.user.toString() === req.user._id.toString();
+
+    if (!isAdmin && !isReviewOwner) {
+        return res.status(403).json({
+            success: false,
+            message: 'You are not authorized to delete this review'
+        })
+    }
+
     const reviews = product.reviews.filter(review => review._id.toString() !== req.query.id.toString());
     const numOfReviews = reviews.length;
 
-    const ratings = product.reviews.reduce((acc, item) => item.rating + acc, 0) / reviews.length
+    const ratings = numOfReviews > 0 ? reviews.reduce((acc, item) => item.rating + acc, 0) / numOfReviews : 0;
 
     await Product.findByIdAndUpdate(req.query.productId, {
         reviews,
@@ -386,6 +462,45 @@ exports.getFilterOptions = async (req, res, next) => {
         return res.status(500).json({
             success: false,
             message: 'Error fetching filter options',
+            error: error.message
+        });
+    }
+}
+
+exports.checkUserCanReview = async (req, res, next) => {
+    try {
+        const productId = req.query.productId;
+        
+        if (!productId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Product ID is required'
+            });
+        }
+
+        // Check if user has a delivered order containing this product
+        const deliveredOrder = await Order.findOne({
+            user: req.user._id,
+            'orderItems.product': productId,
+            orderStatus: 'Delivered'
+        });
+
+        // Check if user already has a review for this product
+        const product = await Product.findById(productId);
+        const existingReview = product ? product.reviews.find(
+            r => r.user.toString() === req.user._id.toString()
+        ) : null;
+
+        return res.status(200).json({
+            success: true,
+            canReview: !!deliveredOrder,
+            hasReview: !!existingReview,
+            review: existingReview || null
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: 'Error checking review eligibility',
             error: error.message
         });
     }
