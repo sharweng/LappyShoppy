@@ -25,7 +25,8 @@ import {
   Typography,
   Paper,
   Checkbox,
-  Tooltip
+  Tooltip,
+  TextField,
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
 import { visuallyHidden } from '@mui/utils';
@@ -87,7 +88,8 @@ function EnhancedTableHead(props) {
             sortDirection={orderBy === headCell.id ? order : false}
             sx={{
               width: headCell.id === 'name' ? 250 : headCell.id === 'brand' ? 120 : headCell.id === 'price' ? 130 : headCell.id === 'stock' ? 120 : headCell.id === 'category' ? 120 : 120,
-              flexShrink: 0
+              flexShrink: 0,
+              fontWeight: 600
             }}
           >
             {headCell.sortable === false ? (
@@ -151,9 +153,7 @@ function EnhancedTableToolbar(props) {
           <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
             All Products
           </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Manage your laptop inventory
-          </Typography>
+
         </Box>
       )}
 
@@ -192,6 +192,7 @@ const ProductList = () => {
   const [orderBy, setOrderBy] = useState('name');
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const getAdminProducts = async () => {
     try {
@@ -355,10 +356,20 @@ const ProductList = () => {
 
   const isSelected = (id) => selected.indexOf(id) !== -1;
 
-  // Avoid a layout jump when reaching the last page with empty rows.
-  const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - products.length) : 0;
+  // Filter by search query
+  const filteredProducts = products.filter((product) => {
+    const searchLower = searchQuery.toLowerCase();
+    return (
+      product.name.toLowerCase().includes(searchLower) ||
+      product.brand?.toLowerCase().includes(searchLower) ||
+      product.category?.toLowerCase().includes(searchLower)
+    );
+  });
 
-  const visibleRows = products
+  // Avoid a layout jump when reaching the last page with empty rows.
+  const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - filteredProducts.length) : 0;
+
+  const visibleRows = filteredProducts
     .slice()
     .sort(getComparator(order, orderBy))
     .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
@@ -366,6 +377,15 @@ const ProductList = () => {
   return (
     <AdminLayout>
       <Box sx={{ width: '100%', p: { xs: 2, md: 4 } }}>
+        {/* Header */}
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
+            Products Management
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            View and manage products
+          </Typography>
+        </Box>
         {!currentUser ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
             <p>Loading authentication...</p>
@@ -376,11 +396,69 @@ const ProductList = () => {
           </Box>
         ) : (
           <Paper sx={{ width: '100%', mb: 2 }}>
-            <EnhancedTableToolbar 
-              numSelected={selected.length} 
-              onDelete={bulkDeleteHandler}
-              onAddProduct={() => navigate('/admin/product/new')}
-            />
+            <Toolbar
+              sx={[
+                {
+                  pl: { sm: 2 },
+                  pr: { xs: 1, sm: 1 },
+                  backgroundColor: '#f5f5f5',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  minHeight: '60px',
+                  gap: 2,
+                  borderBottom: '1px solid #e0e0e0'
+                },
+                selected.length > 0 && {
+                  bgcolor: (theme) =>
+                    alpha(theme.palette.primary.main, theme.palette.action.activatedOpacity),
+                },
+              ]}
+            >
+              {selected.length > 0 ? (
+                <>
+                  <Typography
+                    sx={{ flex: '1 1 100%' }}
+                    color="inherit"
+                    variant="subtitle1"
+                    component="div"
+                  >
+                    {selected.length} selected
+                  </Typography>
+                  <Tooltip title="Delete">
+                    <IconButton onClick={bulkDeleteHandler} color="error">
+                      <DeleteIcon />
+                    </IconButton>
+                  </Tooltip>
+                </>
+              ) : (
+                <>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
+                      All Products
+                    </Typography>
+                    <TextField
+                      placeholder="Search products..."
+                      value={searchQuery}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        setPage(0);
+                      }}
+                      size="small"
+                      sx={{ minWidth: '300px' }}
+                    />
+                  </Box>
+                  <Button
+                    variant="contained"
+                    startIcon={<AddIcon />}
+                    onClick={() => navigate('/admin/product/new')}
+                    sx={{ whiteSpace: 'nowrap' }}
+                  >
+                    Add Product
+                  </Button>
+                </>
+              )}
+            </Toolbar>
             <TableContainer>
               <Table sx={{ minWidth: 750, tableLayout: 'fixed' }} aria-labelledby="tableTitle">
                 <EnhancedTableHead
@@ -389,7 +467,7 @@ const ProductList = () => {
                   orderBy={orderBy}
                   onSelectAllClick={handleSelectAllClick}
                   onRequestSort={handleRequestSort}
-                  rowCount={products.length}
+                  rowCount={filteredProducts.length}
                 />
                 <TableBody>
                   {visibleRows.map((product, index) => {
@@ -492,7 +570,7 @@ const ProductList = () => {
             <TablePagination
               rowsPerPageOptions={[5, 10, 25, 50]}
               component="div"
-              count={products.length}
+              count={filteredProducts.length}
               rowsPerPage={rowsPerPage}
               page={page}
               onPageChange={handleChangePage}

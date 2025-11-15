@@ -25,6 +25,7 @@ import Dashboard from './components/Admin/Dashboard';
 import ProductList from './components/Admin/ProductList';
 import ProductForm from './components/Admin/ProductForm';
 import OrderList from './components/Admin/OrderList';
+import ReviewList from './components/Admin/ReviewList';
 import ProtectedRoute from './components/Route/ProtectedRoute';
 import AdminRoute from './components/Route/AdminRoute';
 
@@ -153,6 +154,14 @@ function AppContent() {
           element={
             <AdminRoute>
               <OrderList />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/reviews"
+          element={
+            <AdminRoute>
+              <ReviewList />
             </AdminRoute>
           }
         />

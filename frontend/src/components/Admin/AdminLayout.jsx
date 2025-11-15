@@ -49,7 +49,7 @@ const AdminLayout = ({ children }) => {
       name: 'Reviews',
       path: '/admin/reviews',
       icon: Star,
-      active: false,
+      active: true,
     },
   ];
 

@@ -20,6 +20,8 @@ import {
   CircularProgress,
   Alert,
   TableSortLabel,
+  TablePagination,
+  TextField,
 } from '@mui/material';
 import {
   KeyboardArrowDown as KeyboardArrowDownIcon,
@@ -93,7 +95,7 @@ function OrderRow({ row, onStatusChange }) {
             {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
           </IconButton>
         </TableCell>
-        <TableCell component="th" scope="row" sx={{ fontWeight: 600, width: 180 }}>
+        <TableCell component="th" scope="row" sx={{ fontWeight: 400, width: 180 }}>
           {row._id}
         </TableCell>
         <TableCell sx={{ width: 150 }}>{row.user?.name || 'Unknown'}</TableCell>
@@ -221,6 +223,9 @@ const OrderList = () => {
   const [error, setError] = useState('');
   const [order, setOrder] = useState('desc');
   const [orderBy, setOrderBy] = useState('createdAt');
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     if (currentUser) {
@@ -262,6 +267,15 @@ const OrderList = () => {
     setOrderBy(property);
   };
 
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
   const getComparator = (order, orderBy) => {
     return order === 'desc'
       ? (a, b) => {
@@ -292,6 +306,19 @@ const OrderList = () => {
 
   const sortedOrders = [...orders].sort(getComparator(order, orderBy));
 
+  // Filter by search query
+  const filteredOrders = sortedOrders.filter((order) => {
+    const searchLower = searchQuery.toLowerCase();
+    return (
+      order._id.toLowerCase().includes(searchLower) ||
+      order.user?.name.toLowerCase().includes(searchLower)
+    );
+  });
+
+  // Pagination
+  const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - filteredOrders.length) : 0;
+  const visibleOrders = filteredOrders.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+
   return (
     <AdminLayout>
       <Box sx={{ p: { xs: 2, md: 4 } }}>
@@ -301,7 +328,7 @@ const OrderList = () => {
             Orders Management
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            View and update order statuses
+            View and manage order transactions
           </Typography>
         </Box>
 
@@ -324,124 +351,167 @@ const OrderList = () => {
             </Typography>
           </Paper>
         ) : (
-          <TableContainer component={Paper}>
-            <Table aria-label="collapsible orders table" sx={{ tableLayout: 'fixed' }}>
-              <TableHead>
-                <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                  <TableCell sx={{ width: 50, fontWeight: 600 }} />
-                  <TableCell sx={{ width: 180, fontWeight: 600 }}>
-                    <TableSortLabel
-                      active={orderBy === '_id'}
-                      direction={orderBy === '_id' ? order : 'asc'}
-                      onClick={(e) => handleRequestSort(e, '_id')}
-                      hideSortIcon={false}
-                      sx={{
-                        '& .MuiTableSortLabel-icon': {
-                          opacity: 1,
-                        },
-                      }}
-                    >
-                      Order ID
-                      {orderBy === '_id' ? (
-                        <Box component="span" sx={visuallyHidden}>
-                          {order === 'desc' ? 'sorted descending' : 'sorted ascending'}
-                        </Box>
-                      ) : null}
-                    </TableSortLabel>
-                  </TableCell>
-                  <TableCell sx={{ width: 150, fontWeight: 600 }}>
-                    <TableSortLabel
-                      active={orderBy === 'user'}
-                      direction={orderBy === 'user' ? order : 'asc'}
-                      onClick={(e) => handleRequestSort(e, 'user')}
-                      hideSortIcon={false}
-                      sx={{
-                        '& .MuiTableSortLabel-icon': {
-                          opacity: 1,
-                        },
-                      }}
-                    >
-                      Customer
-                      {orderBy === 'user' ? (
-                        <Box component="span" sx={visuallyHidden}>
-                          {order === 'desc' ? 'sorted descending' : 'sorted ascending'}
-                        </Box>
-                      ) : null}
-                    </TableSortLabel>
-                  </TableCell>
-                  <TableCell align="center" sx={{ width: 130, fontWeight: 600 }}>
-                    <TableSortLabel
-                      active={orderBy === 'totalPrice'}
-                      direction={orderBy === 'totalPrice' ? order : 'asc'}
-                      onClick={(e) => handleRequestSort(e, 'totalPrice')}
-                      hideSortIcon={false}
-                      sx={{
-                        '& .MuiTableSortLabel-icon': {
-                          opacity: 1,
-                        },
-                      }}
-                    >
-                      Total
-                      {orderBy === 'totalPrice' ? (
-                        <Box component="span" sx={visuallyHidden}>
-                          {order === 'desc' ? 'sorted descending' : 'sorted ascending'}
-                        </Box>
-                      ) : null}
-                    </TableSortLabel>
-                  </TableCell>
-                  <TableCell align="center" sx={{ width: 160, fontWeight: 600 }}>
-                    <TableSortLabel
-                      active={orderBy === 'orderStatus'}
-                      direction={orderBy === 'orderStatus' ? order : 'asc'}
-                      onClick={(e) => handleRequestSort(e, 'orderStatus')}
-                      hideSortIcon={false}
-                      sx={{
-                        '& .MuiTableSortLabel-icon': {
-                          opacity: 1,
-                        },
-                      }}
-                    >
-                      Status
-                      {orderBy === 'orderStatus' ? (
-                        <Box component="span" sx={visuallyHidden}>
-                          {order === 'desc' ? 'sorted descending' : 'sorted ascending'}
-                        </Box>
-                      ) : null}
-                    </TableSortLabel>
-                  </TableCell>
-                  <TableCell align="center" sx={{ width: 140, fontWeight: 600 }}>
-                    <TableSortLabel
-                      active={orderBy === 'createdAt'}
-                      direction={orderBy === 'createdAt' ? order : 'asc'}
-                      onClick={(e) => handleRequestSort(e, 'createdAt')}
-                      hideSortIcon={false}
-                      sx={{
-                        '& .MuiTableSortLabel-icon': {
-                          opacity: 1,
-                        },
-                      }}
-                    >
-                      Date
-                      {orderBy === 'createdAt' ? (
-                        <Box component="span" sx={visuallyHidden}>
-                          {order === 'desc' ? 'sorted descending' : 'sorted ascending'}
-                        </Box>
-                      ) : null}
-                    </TableSortLabel>
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {sortedOrders.map((orderItem) => (
-                  <OrderRow
-                    key={orderItem._id}
-                    row={orderItem}
-                    onStatusChange={fetchOrders}
-                  />
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          <Paper sx={{ width: '100%', mb: 2 }}>
+            <Box sx={{ 
+              pl: { sm: 2 },
+              pr: { xs: 1, sm: 1 },
+              backgroundColor: '#f5f5f5',
+              borderBottom: '1px solid #e0e0e0',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              minHeight: '60px',
+              gap: 2
+            }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
+                  All Orders
+                </Typography>
+                <TextField
+                  placeholder="Search orders..."
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setPage(0);
+                  }}
+                  size="small"
+                  sx={{ minWidth: '300px' }}
+                />
+              </Box>
+            </Box>
+            <TableContainer>
+              <Table aria-label="collapsible orders table" sx={{ tableLayout: 'fixed' }}>
+                <TableHead>
+                  <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                    <TableCell sx={{ width: 50, fontWeight: 600 }} />
+                    <TableCell sx={{ width: 180, fontWeight: 600 }}>
+                      <TableSortLabel
+                        active={orderBy === '_id'}
+                        direction={orderBy === '_id' ? order : 'asc'}
+                        onClick={(e) => handleRequestSort(e, '_id')}
+                        hideSortIcon={false}
+                        sx={{
+                          '& .MuiTableSortLabel-icon': {
+                            opacity: 1,
+                          },
+                        }}
+                      >
+                        Order ID
+                        {orderBy === '_id' ? (
+                          <Box component="span" sx={visuallyHidden}>
+                            {order === 'desc' ? 'sorted descending' : 'sorted ascending'}
+                          </Box>
+                        ) : null}
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell sx={{ width: 150, fontWeight: 600 }}>
+                      <TableSortLabel
+                        active={orderBy === 'user'}
+                        direction={orderBy === 'user' ? order : 'asc'}
+                        onClick={(e) => handleRequestSort(e, 'user')}
+                        hideSortIcon={false}
+                        sx={{
+                          '& .MuiTableSortLabel-icon': {
+                            opacity: 1,
+                          },
+                        }}
+                      >
+                        Customer
+                        {orderBy === 'user' ? (
+                          <Box component="span" sx={visuallyHidden}>
+                            {order === 'desc' ? 'sorted descending' : 'sorted ascending'}
+                          </Box>
+                        ) : null}
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell align="center" sx={{ width: 130, fontWeight: 600 }}>
+                      <TableSortLabel
+                        active={orderBy === 'totalPrice'}
+                        direction={orderBy === 'totalPrice' ? order : 'asc'}
+                        onClick={(e) => handleRequestSort(e, 'totalPrice')}
+                        hideSortIcon={false}
+                        sx={{
+                          '& .MuiTableSortLabel-icon': {
+                            opacity: 1,
+                          },
+                        }}
+                      >
+                        Total
+                        {orderBy === 'totalPrice' ? (
+                          <Box component="span" sx={visuallyHidden}>
+                            {order === 'desc' ? 'sorted descending' : 'sorted ascending'}
+                          </Box>
+                        ) : null}
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell align="center" sx={{ width: 160, fontWeight: 600 }}>
+                      <TableSortLabel
+                        active={orderBy === 'orderStatus'}
+                        direction={orderBy === 'orderStatus' ? order : 'asc'}
+                        onClick={(e) => handleRequestSort(e, 'orderStatus')}
+                        hideSortIcon={false}
+                        sx={{
+                          '& .MuiTableSortLabel-icon': {
+                            opacity: 1,
+                          },
+                        }}
+                      >
+                        Status
+                        {orderBy === 'orderStatus' ? (
+                          <Box component="span" sx={visuallyHidden}>
+                            {order === 'desc' ? 'sorted descending' : 'sorted ascending'}
+                          </Box>
+                        ) : null}
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell align="center" sx={{ width: 140, fontWeight: 600 }}>
+                      <TableSortLabel
+                        active={orderBy === 'createdAt'}
+                        direction={orderBy === 'createdAt' ? order : 'asc'}
+                        onClick={(e) => handleRequestSort(e, 'createdAt')}
+                        hideSortIcon={false}
+                        sx={{
+                          '& .MuiTableSortLabel-icon': {
+                            opacity: 1,
+                          },
+                        }}
+                      >
+                        Date
+                        {orderBy === 'createdAt' ? (
+                          <Box component="span" sx={visuallyHidden}>
+                            {order === 'desc' ? 'sorted descending' : 'sorted ascending'}
+                          </Box>
+                        ) : null}
+                      </TableSortLabel>
+                    </TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {visibleOrders.map((orderItem) => (
+                    <OrderRow
+                      key={orderItem._id}
+                      row={orderItem}
+                      onStatusChange={fetchOrders}
+                    />
+                  ))}
+                  {emptyRows > 0 && (
+                    <TableRow style={{ height: 53 * emptyRows }}>
+                      <TableCell colSpan={6} />
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <TablePagination
+              rowsPerPageOptions={[5, 10, 25, 50]}
+              component="div"
+              count={filteredOrders.length}
+              rowsPerPage={rowsPerPage}
+              page={page}
+              onPageChange={handleChangePage}
+              onRowsPerPageChange={handleChangeRowsPerPage}
+            />
+          </Paper>
         )}
       </Box>
     </AdminLayout>
