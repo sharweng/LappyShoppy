@@ -85,10 +85,24 @@ VITE_FIREBASE_APP_ID=your_app_id
    - Copy config to frontend `.env`
    - Generate service account key for backend `.env`
 
-4. **Start Application**
+4. **Database Setup**
+```bash
+# Populate sample products and calculate ratings
+node backend/scripts/addSampleProducts.js && node backend/scripts/recalculateRatings.js
+
+# Create admin user
+node backend/scripts/createAdmin.js
+```
+
+5. **Create Admin Account in Firebase**
+   - Go to Firebase Console → Authentication → Users
+   - Add user: `admin@lappyshoppy.com` with your desired password
+   - This enables admin functionality in the application
+
+6. **Start Application**
 ```bash
 # Backend (Terminal 1)
-cd backend && npm start
+cd backend && npm run dev
 
 # Frontend (Terminal 2)
 cd frontend && npm run dev
@@ -108,16 +122,6 @@ Visit http://localhost:5173
 1. **Register/Login** - Create account or sign in
 2. **Update Profile** - Upload photo, change name
 3. **Browse** - View available features
-
----
-
-## 📚 Documentation
-
-- [FIREBASE_SETUP.md](./FIREBASE_SETUP.md) - Complete Firebase setup
-- [QUICK_START.md](./QUICK_START.md) - Quick start guide
-- [USER_FLOW_GUIDE.md](./USER_FLOW_GUIDE.md) - User journey
-
----
 
 <div align="center">
 
