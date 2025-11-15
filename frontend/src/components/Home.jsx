@@ -20,7 +20,8 @@ const Home = () => {
 
   // Check if any filters are active
   const hasActiveFilters = () => {
-    return filters.category !== '' || 
+    return filters.search !== '' ||
+           filters.category !== '' || 
            filters.minPrice !== '' || 
            filters.maxPrice !== '' || 
            filters.brand !== '' || 
@@ -43,6 +44,7 @@ const Home = () => {
     graphics: []
   });
   const [filters, setFilters] = useState({
+    search: '',
     category: '',
     minPrice: '',
     maxPrice: '',
@@ -57,6 +59,21 @@ const Home = () => {
     maxRating: 5
   });
 
+  // Local controlled input for search with debounce
+  const [searchInput, setSearchInput] = useState('');
+
+  // Debounce syncing searchInput -> filters.search (300ms)
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (filters.search === searchInput) return;
+      // update search term only; let fetchProducts handle replacing results
+      setFilters(prev => ({ ...prev, search: searchInput }));
+      // Reset to first page to fetch new results; don't clear products immediately to avoid UI flicker
+      setPage(1);
+  }, 300);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchInput]);
   // Expandable filter sections
   const [expandedSections, setExpandedSections] = useState({
     price: true,
@@ -86,6 +103,7 @@ const Home = () => {
       
       // Build query string with filters
       const params = new URLSearchParams({ page: pageNum });
+  if (filters.search) params.append('keyword', filters.search);
       if (filters.category) params.append('category', filters.category);
       if (filters.minPrice) params.append('price[gte]', filters.minPrice);
       if (filters.maxPrice) params.append('price[lte]', filters.maxPrice);
@@ -133,6 +151,12 @@ const Home = () => {
   };
 
   const handleFilterChange = (filterName, value) => {
+    // For search input we only update the local controlled input here
+    if (filterName === 'search') {
+      setSearchInput(value);
+      return;
+    }
+
     setFilters(prev => {
       const newFilters = { ...prev, [filterName]: value };
       // Reset products when filter changes
@@ -146,6 +170,7 @@ const Home = () => {
 
   const clearFilters = () => {
     const clearedFilters = {
+      search: '',
       category: '',
       minPrice: '',
       maxPrice: '',
@@ -160,6 +185,7 @@ const Home = () => {
       maxRating: 5
     };
     setFilters(clearedFilters);
+    setSearchInput('');
     setProducts([]);
     setPage(1);
     setHasMore(true);
@@ -228,17 +254,33 @@ const Home = () => {
 
       {/* Products Section */}
       <div id="products" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 flex-grow w-full">
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
           <h2 className="text-3xl font-bold text-gray-900">
             Our Premium Laptops
           </h2>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center space-x-2 bg-white text-gray-700 px-4 py-2 rounded-lg border-2 border-gray-300 hover:border-blue-600 transition duration-300"
-          >
-            <Filter className="w-5 h-5" />
-            <span className="font-medium">{showFilters ? 'Hide Filters' : 'Show Filters'}</span>
-          </button>
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center w-full lg:w-auto">
+            <div className="relative flex-1 lg:flex-initial lg:min-w-[300px]">
+              <input
+                type="text"
+                value={searchInput}
+                onChange={(e) => handleFilterChange('search', e.target.value)}
+                placeholder="Search laptops by name..."
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-500 text-sm"
+              />
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center space-x-2 bg-white text-gray-700 px-4 py-2 rounded-lg border border-gray-300 hover:border-blue-600 hover:bg-gray-50 transition duration-300 whitespace-nowrap"
+            >
+              <Filter className="w-4 h-4" />
+              <span className="font-medium text-sm">{showFilters ? 'Hide Filters' : 'Show Filters'}</span>
+            </button>
+          </div>
         </div>
 
         <div className="flex gap-6">
