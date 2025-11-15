@@ -364,6 +364,8 @@ const ProductList = () => {
     return (
       product.name.toLowerCase().includes(searchLower) ||
       product.brand?.toLowerCase().includes(searchLower) ||
+      product.price?.toString().includes(searchLower) ||
+      product.stock?.toString().includes(searchLower) ||
       product.category?.toLowerCase().includes(searchLower)
     );
   });

@@ -444,7 +444,9 @@ const ReviewList = () => {
     return (
       review.product?.name.toLowerCase().includes(searchLower) ||
       review.username?.toLowerCase().includes(searchLower) ||
-      review.comment?.toLowerCase().includes(searchLower)
+      review.rating?.toString().includes(searchLower) ||
+      review.comment?.toLowerCase().includes(searchLower) ||
+      new Date(review.createdAt).toLocaleDateString('en-PH').toLowerCase().includes(searchLower)
     );
   });
 

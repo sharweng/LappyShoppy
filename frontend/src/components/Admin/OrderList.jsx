@@ -313,7 +313,10 @@ const OrderList = () => {
     const searchLower = searchQuery.toLowerCase();
     return (
       order._id.toLowerCase().includes(searchLower) ||
-      order.user?.name.toLowerCase().includes(searchLower)
+      order.user?.name.toLowerCase().includes(searchLower) ||
+      order.totalPrice?.toString().includes(searchLower) ||
+      order.orderStatus?.toLowerCase().includes(searchLower) ||
+      new Date(order.createdAt).toLocaleDateString('en-PH').toLowerCase().includes(searchLower)
     );
   });
 

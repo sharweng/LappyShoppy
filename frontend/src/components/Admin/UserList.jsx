@@ -129,7 +129,9 @@ const UserList = () => {
     const searchLower = searchQuery.toLowerCase();
     return (
       user.username?.toLowerCase().includes(searchLower) ||
-      user.name?.toLowerCase().includes(searchLower)
+      user.name?.toLowerCase().includes(searchLower) ||
+      user.role?.toLowerCase().includes(searchLower) ||
+      new Date(user.createdAt).toLocaleDateString('en-PH').toLowerCase().includes(searchLower)
     );
   });
   const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - filteredUsers.length) : 0;
