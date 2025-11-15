@@ -63,6 +63,7 @@ const ProductDetail = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [reviewToDelete, setReviewToDelete] = useState(null);
   const [reviewFilter, setReviewFilter] = useState('all');
+  const [showImageModal, setShowImageModal] = useState(false);
 
   // React Hook Form for review
   const { register, handleSubmit, formState: { errors, isSubmitting }, setValue, reset, watch } = useForm({
@@ -409,7 +410,8 @@ const ProductDetail = () => {
                       <img
                         src={product.images[selectedImageIndex].url}
                         alt={product.name}
-                        className={`w-full h-full object-cover transition-all duration-300 ease-in-out ${imageTransition}`}
+                        className={`w-full h-full object-cover transition-all duration-300 ease-in-out cursor-pointer ${imageTransition}`}
+                        onClick={() => setShowImageModal(true)}
                       />
                     </div>
                     {product.images.length > 1 && (
@@ -910,6 +912,59 @@ const ProductDetail = () => {
                   Delete
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Image Modal */}
+        {showImageModal && product.images && product.images.length > 0 && (
+          <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50" onClick={() => setShowImageModal(false)}>
+            {/* Close Button - Top Right Corner */}
+            <button
+              onClick={() => setShowImageModal(false)}
+              className="absolute top-4 right-4 z-10 bg-black bg-opacity-50 hover:bg-opacity-70 text-white p-2 rounded-full transition duration-300"
+            >
+              <X className="w-6 h-6" />
+            </button>
+
+            {/* Navigation Buttons - Left/Right Edges */}
+            {product.images.length > 1 && (
+              <>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    prevImage();
+                  }}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-black bg-opacity-50 hover:bg-opacity-70 text-white p-3 rounded-full transition duration-300"
+                >
+                  <ChevronLeft className="w-6 h-6" />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    nextImage();
+                  }}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-black bg-opacity-50 hover:bg-opacity-70 text-white p-3 rounded-full transition duration-300"
+                >
+                  <ChevronRight className="w-6 h-6" />
+                </button>
+              </>
+            )}
+
+            {/* Image Counter - Bottom Center */}
+            {product.images.length > 1 && (
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full text-sm">
+                {selectedImageIndex + 1} / {product.images.length}
+              </div>
+            )}
+
+            {/* Main Image Container - Constrained for high-quality images */}
+            <div className="relative max-w-5xl max-h-full bg-white rounded-lg shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+              <img
+                src={product.images[selectedImageIndex].url}
+                alt={product.name}
+                className="w-full h-full object-contain"
+              />
             </div>
           </div>
         )}
