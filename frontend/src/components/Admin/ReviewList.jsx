@@ -35,6 +35,7 @@ import {
 } from '@mui/icons-material';
 import { Star } from 'lucide-react';
 import { toast } from 'react-toastify';
+import { CSVLink } from 'react-csv';
 
 const API_URL = 'http://localhost:4001/api/v1';
 
@@ -451,6 +452,16 @@ const ReviewList = () => {
   const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - filteredReviews.length) : 0;
   const visibleReviews = filteredReviews.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
+  // Prepare CSV data for reviews (flatten product object, exclude __v)
+  const reviewCsvData = filteredReviews.map(r => ({
+    productId: r.product?._id || '',
+    productName: r.product?.name || '',
+    reviewer: r.username || '',
+    rating: r.rating,
+    comment: r.comment || '',
+    date: r.createdAt ? new Date(r.createdAt).toLocaleDateString('en-PH') : ''
+  }));
+
   return (
     <AdminLayout>
       <Box sx={{ p: { xs: 2, md: 4 } }}>
@@ -507,16 +518,27 @@ const ReviewList = () => {
                   </Typography>
                 )}
                 {!selected.length > 0 && (
-                  <TextField
-                    placeholder="Search reviews..."
-                    value={searchQuery}
-                    onChange={(e) => {
-                      setSearchQuery(e.target.value);
-                      setPage(0);
-                    }}
-                    size="small"
-                    sx={{ minWidth: '300px' }}
-                  />
+                  <>
+                    <TextField
+                      placeholder="Search reviews..."
+                      value={searchQuery}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        setPage(0);
+                      }}
+                      size="small"
+                      sx={{ minWidth: '300px' }}
+                    />
+                    <Button
+                      component={CSVLink}
+                      data={reviewCsvData}
+                      filename={"reviews.csv"}
+                      variant="outlined"
+                      sx={{ ml: 1, py: 0.6, px: 1.5, borderRadius: 1 }}
+                    >
+                      Download CSV
+                    </Button>
+                  </>
                 )}
               </Box>
               {selected.length > 0 && (
@@ -527,6 +549,7 @@ const ReviewList = () => {
                 </Tooltip>
               )}
             </Box>
+            {/* CSV download moved next to search */}
             <TableContainer>
               <Table aria-label="collapsible reviews table" sx={{ tableLayout: 'fixed' }}>
                 <TableHead>

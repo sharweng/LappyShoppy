@@ -32,6 +32,7 @@ import {
 import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
 import { visuallyHidden } from '@mui/utils';
 import { toast } from 'react-toastify';
+import { CSVLink } from 'react-csv';
 
 const API_URL = 'http://localhost:4001/api/v1';
 
@@ -375,6 +376,17 @@ const ProductList = () => {
     .sort(getComparator(order, orderBy))
     .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
+  // Prepare CSV data for products (exclude internal fields like __v)
+  // Export all filtered products (not just current page)
+  const productCsvData = filteredProducts.map(p => ({
+    name: p.name,
+    brand: p.brand || '',
+    price: p.price,
+    stock: p.stock,
+    category: p.category || '',
+    createdAt: p.createdAt ? new Date(p.createdAt).toLocaleDateString('en-PH') : ''
+  }));
+
   return (
     <AdminLayout>
       <Box sx={{ width: '100%', p: { xs: 2, md: 4 } }}>
@@ -448,6 +460,15 @@ const ProductList = () => {
                       size="small"
                       sx={{ minWidth: '300px' }}
                     />
+                    <Button
+                      component={CSVLink}
+                      data={productCsvData}
+                      filename={"products.csv"}
+                      variant="outlined"
+                      sx={{ ml: 1, py: 0.6, px: 1.5, borderRadius: 1 }}
+                    >
+                      Download CSV
+                    </Button>
                   </Box>
                   <Button
                     variant="contained"
@@ -460,6 +481,7 @@ const ProductList = () => {
                 </>
               )}
             </Toolbar>
+            {/* CSV download moved next to search */}
             <TableContainer>
               <Table sx={{ minWidth: 750, tableLayout: 'fixed' }} aria-labelledby="tableTitle">
                 <EnhancedTableHead

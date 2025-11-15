@@ -79,40 +79,36 @@ const AdminLayout = ({ children }) => {
           sidebarOpen ? 'w-64' : 'w-20'
         }`}
       >
-        {/* Logo and Toggle */}
-        <div className={`flex items-center p-4 border-b border-blue-700 relative ${sidebarOpen ? '' : 'justify-center'}`}>
+        {/* Logo and Toggle - styled to match nav items */}
+        <div className={`border-b border-blue-700 ${sidebarOpen ? '' : 'flex justify-center'}`}>
           {sidebarOpen ? (
-            <>
-              <Package className="w-7 h-7 text-white mr-2" />
-              <span className="text-xl font-bold">LappyShoppy</span>
+            <div className="flex items-center px-2">
+              <NavLink
+                to="/admin/dashboard"
+                className="flex items-center space-x-3 px-4 py-3 transition-all duration-200 hover:bg-blue-700/50"
+              >
+                <Package className="w-5 h-5 flex-shrink-0" />
+                <span className="font-medium text-lg">LappyShoppy</span>
+              </NavLink>
               <button
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="ml-auto flex items-center justify-center p-2 rounded-lg hover:bg-blue-700 transition-colors"
+                onClick={() => setSidebarOpen(false)}
+                className="ml-auto flex items-center justify-center px-4 py-3 transition-all duration-200 hover:bg-blue-700/50"
                 aria-label="Minimize sidebar"
-                style={{ minWidth: 40, minHeight: 40, maxWidth: 40, maxHeight: 40 }}
               >
-                <ChevronLeft className="w-5 h-5 mx-auto" />
+                <ChevronLeft className="w-5 h-5" />
               </button>
-            </>
+            </div>
           ) : (
-            <>
+            <div>
               <button
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="flex items-center justify-center p-2 rounded-lg bg-transparent hover:bg-blue-700 transition-colors mx-auto"
-                aria-label="Expand sidebar"
-                style={{ minWidth: 40, minHeight: 40, maxWidth: 40, maxHeight: 40 }}
+                onClick={() => { navigate('/admin/dashboard'); setSidebarOpen(true); }}
+                className="flex items-center justify-center h-12 w-full px-4 transition-all duration-200 hover:bg-blue-700/50"
+                aria-label="Open dashboard"
+                style={{ minHeight: 48 }}
               >
-                <Package className="w-7 h-7 text-white" />
+                <Package className="w-5 h-5" />
               </button>
-              <button
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="absolute right-4 flex items-center justify-center p-2 rounded-lg bg-blue-600 hover:bg-blue-700 transition-colors"
-                aria-label="Expand sidebar"
-                style={{ minWidth: 40, minHeight: 40, maxWidth: 40, maxHeight: 40 }}
-              >
-                <ChevronRight className="w-5 h-5 mx-auto" />
-              </button>
-            </>
+            </div>
           )}
         </div>
 
@@ -148,13 +144,13 @@ const AdminLayout = ({ children }) => {
           ))}
         </nav>
 
-        {/* User Profile */}
-        <div className="border-t border-blue-700 p-4 flex flex-col items-center">
+        {/* User Profile/footer - match nav item styles */}
+        <div className="border-t border-blue-700">
           {sidebarOpen ? (
-            <div className="space-y-3 w-full">
-              <button
-                onClick={() => navigate('/profile')}
-                className="w-full flex items-center space-x-3 p-2 rounded-lg hover:bg-blue-700 transition-colors"
+            <div className="flex flex-col">
+              <NavLink
+                to="/profile"
+                className="flex items-center space-x-3 px-4 py-3 transition-all duration-200 hover:bg-blue-700/50"
               >
                 <div className="w-10 h-10 rounded-full bg-blue-900 flex items-center justify-center overflow-hidden">
                   {currentUser?.photoURL ? (
@@ -164,7 +160,7 @@ const AdminLayout = ({ children }) => {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <span className="text-lg font-bold">
+                    <span className="text-lg font-bold text-white">
                       {currentUser?.displayName?.charAt(0) || 'A'}
                     </span>
                   )}
@@ -177,40 +173,42 @@ const AdminLayout = ({ children }) => {
                     {currentUser?.email}
                   </p>
                 </div>
-              </button>
+              </NavLink>
               <button
                 onClick={handleLogout}
-                className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+                className="flex items-center space-x-3 px-4 py-3 transition-all duration-200 hover:bg-red-700 bg-red-600 text-white"
               >
                 <LogOut className="w-4 h-4" />
-                <span>Logout</span>
+                <span className="font-medium">Logout</span>
               </button>
             </div>
           ) : (
-            <div className="flex flex-col items-center space-y-3 w-full">
+            <div className="flex flex-col items-center">
               <button
-                onClick={() => navigate('/profile')}
-                className="w-10 h-10 rounded-full bg-blue-900 flex items-center justify-center overflow-hidden hover:ring-2 hover:ring-blue-400 transition-all"
+                onClick={() => { navigate('/profile'); }}
+                className="flex items-center justify-center h-12 w-full px-4 py-3 min-h-[64px] transition-all duration-200 hover:bg-blue-700/50"
                 aria-label="Go to profile"
               >
-                {currentUser?.photoURL ? (
-                  <img 
-                    src={currentUser.photoURL} 
-                    alt="Profile" 
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <span className="text-lg font-bold text-white">
-                    {currentUser?.displayName?.charAt(0) || 'A'}
-                  </span>
-                )}
+                <div className="w-10 h-10 rounded-full bg-blue-900 flex items-center justify-center overflow-hidden">
+                  {currentUser?.photoURL ? (
+                    <img 
+                      src={currentUser.photoURL} 
+                      alt="Profile" 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-lg font-bold text-white">
+                      {currentUser?.displayName?.charAt(0) || 'A'}
+                    </span>
+                  )}
+                </div>
               </button>
               <button
                 onClick={handleLogout}
-                className="w-full p-2 bg-red-600 hover:bg-red-700 rounded-lg transition-colors flex items-center justify-center"
-                style={{ minHeight: 40 }}
+                className="mt-0 flex items-center justify-center h-12 w-full px-4 transition-all duration-200 hover:bg-red-700 bg-red-600 text-white"
+                aria-label="Logout"
               >
-                <LogOut className="w-6 h-6 mx-auto" />
+                <LogOut className="w-4 h-4" />
               </button>
             </div>
           )}

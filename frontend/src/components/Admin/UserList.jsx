@@ -7,6 +7,7 @@ import {
 } from '@mui/material';
 import { Delete as DeleteIcon } from '@mui/icons-material';
 import { visuallyHidden } from '@mui/utils';
+import { CSVLink } from 'react-csv';
 
 const API_URL = 'http://localhost:4001/api/v1';
 
@@ -134,6 +135,15 @@ const UserList = () => {
   const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - filteredUsers.length) : 0;
   const visibleUsers = filteredUsers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
+  // Prepare CSV data (exclude avatar, __v, firebase uid and email)
+  // Export all filtered users (not just current page)
+  const userCsvData = filteredUsers.map(u => ({
+    username: u.username,
+    name: u.name,
+    role: u.role,
+    dateJoined: new Date(u.createdAt).toLocaleDateString('en-PH')
+  }));
+
   const isSelected = (id) => selected.indexOf(id) !== -1;
   const handleSelectAllClick = (event) => {
     if (event.target.checked) {
@@ -258,6 +268,15 @@ const UserList = () => {
                   size="small"
                   sx={{ minWidth: '300px' }}
                 />
+                <Button
+                  component={CSVLink}
+                  data={userCsvData}
+                  filename={"users.csv"}
+                  variant="outlined"
+                  sx={{ ml: 1, py: 0.6, px: 1.5, borderRadius: 1 }}
+                >
+                  Download CSV
+                </Button>
               </Box>
               {!loading && selected.length > 0 && (
                 <Box sx={{ display: 'flex', gap: 1 }}>
@@ -270,6 +289,7 @@ const UserList = () => {
                 </Box>
               )}
             </Toolbar>
+            {/* CSV download is placed next to search above */}
             <TableContainer>
               <Table aria-label="users table" sx={{ tableLayout: 'fixed' }}>
                 <TableHead>

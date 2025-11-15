@@ -14,6 +14,7 @@ import {
   TableRow,
   Typography,
   Paper,
+  Button,
   Select,
   MenuItem,
   Tooltip,
@@ -30,6 +31,7 @@ import {
 } from '@mui/icons-material';
 import { visuallyHidden } from '@mui/utils';
 import { toast } from 'react-toastify';
+import { CSVLink } from 'react-csv';
 
 const API_URL = 'http://localhost:4001/api/v1';
 
@@ -319,6 +321,17 @@ const OrderList = () => {
   const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - filteredOrders.length) : 0;
   const visibleOrders = filteredOrders.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
+  // Prepare CSV data for orders (flatten nested objects, exclude __v)
+  // Export all filtered orders (not just current page)
+  const orderCsvData = filteredOrders.map(o => ({
+    orderId: o._id,
+    customer: o.user?.name || 'Unknown',
+    total: o.totalPrice != null ? o.totalPrice : '',
+    status: o.orderStatus || '',
+    date: o.createdAt ? new Date(o.createdAt).toLocaleDateString('en-PH') : '',
+    items: (o.orderItems || []).map(i => `${i.name} x${i.quantity}`).join('; ')
+  }));
+
   return (
     <AdminLayout>
       <Box sx={{ p: { xs: 2, md: 4 } }}>
@@ -377,6 +390,15 @@ const OrderList = () => {
                   size="small"
                   sx={{ minWidth: '300px' }}
                 />
+                <Button
+                  component={CSVLink}
+                  data={orderCsvData}
+                  filename={"orders.csv"}
+                  variant="outlined"
+                  sx={{ ml: 1, py: 0.6, px: 1.5, borderRadius: 1 }}
+                >
+                  Download CSV
+                </Button>
               </Box>
             </Box>
             <TableContainer>
