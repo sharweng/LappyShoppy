@@ -25,6 +25,7 @@ import {
   Typography,
   Paper,
   Checkbox,
+  CircularProgress,
   Tooltip,
   TextField,
 } from '@mui/material';
@@ -391,8 +392,8 @@ const ProductList = () => {
             <p>Loading authentication...</p>
           </Box>
         ) : loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-            <p>Loading products...</p>
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+            <CircularProgress />
           </Box>
         ) : (
           <Paper sx={{ width: '100%', mb: 2 }}>

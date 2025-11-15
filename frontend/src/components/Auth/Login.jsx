@@ -8,6 +8,7 @@ import { FaFacebook } from 'react-icons/fa';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
+import { auth } from '../../firebase.config';
 
 // Yup validation schema
 const loginSchema = yup.object().shape({
@@ -69,6 +70,38 @@ const Login = () => {
       
       // Now login with email
       await login(loginEmail, password);
+      
+      // Get Firebase token and check user status
+      const firebaseUser = auth.currentUser;
+      if (firebaseUser) {
+        const token = await firebaseUser.getIdToken();
+        try {
+          const checkResponse = await fetch('http://localhost:4001/api/v1/me', {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          if (checkResponse.status === 403) {
+            await logout(false);
+            setError('email', { type: 'manual', message: 'Your account is deactivated.' });
+            toast.error('Your account is deactivated.');
+            return;
+          } else if (!checkResponse.ok) {
+            // User doesn't exist, but for password login, they should exist
+            setError('email', { type: 'manual', message: 'Account setup incomplete.' });
+            toast.error('Account setup incomplete.');
+            await logout(false);
+            return;
+          }
+        } catch (error) {
+          console.error('Error checking user status:', error);
+          setError('email', { type: 'manual', message: 'Error verifying account.' });
+          toast.error('Error verifying account.');
+          await logout(false);
+          return;
+        }
+      }
+      
       toast.success('Login successful!');
       
       // Check if user is admin and redirect accordingly
@@ -79,6 +112,19 @@ const Login = () => {
       }
     } catch (error) {
       console.error('Login error:', error);
+      // Axios error handling for backend response
+      if (error.response) {
+        if (error.response.status === 403 && error.response.data?.message?.includes('deactivated')) {
+          setError('email', { type: 'manual', message: 'Your account is deactivated.' });
+          toast.error('Your account is deactivated.');
+          return;
+        }
+        if (error.response.status === 401) {
+          setError('email', { type: 'manual', message: 'No account found with this email' });
+          toast.error('User not found');
+          return;
+        }
+      }
       if (error.code === 'auth/user-not-found') {
         setError('email', { type: 'manual', message: 'No account found with this email' });
         toast.error('User not found');
@@ -115,7 +161,11 @@ const Login = () => {
           }
         });
         
-        if (checkResponse.ok) {
+        if (checkResponse.status === 403) {
+          await logout(false);
+          toast.error('Your account is deactivated.');
+          return;
+        } else if (checkResponse.ok) {
           // User exists, proceed to home
           toast.success('Signed in with Google successfully!');
           navigate('/');
@@ -178,7 +228,11 @@ const Login = () => {
           }
         });
         
-        if (checkResponse.ok) {
+        if (checkResponse.status === 403) {
+          await logout(false);
+          toast.error('Your account is deactivated.');
+          return;
+        } else if (checkResponse.ok) {
           // User exists, proceed to home
           toast.success('Signed in with Facebook successfully!');
           navigate('/');

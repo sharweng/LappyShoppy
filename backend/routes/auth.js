@@ -20,10 +20,12 @@ const {
     updateUser,
 } = require('../controllers/auth');
 
-const {isAuthenticatedUser, authorizeRoles} = require('../middlewares/auth')
 
-router.post('/register', registerUser);
-router.post('/login', loginUser);
+const {isAuthenticatedUser, authorizeRoles} = require('../middlewares/auth')
+const checkDeactivated = require('../middlewares/checkDeactivated');
+
+router.post('/register', checkDeactivated, registerUser);
+router.post('/login', checkDeactivated, loginUser);
 router.post('/get-user-email', getUserEmail);
 router.post('/check-username', checkUsername);
 router.post('/password/forgot', forgotPassword);

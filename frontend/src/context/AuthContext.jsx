@@ -14,6 +14,21 @@ import { auth } from '../firebase.config';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 
+// Axios interceptor for handling 403 errors
+axios.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response && error.response.status === 403 && error.response.data?.message?.includes('deactivated')) {
+      // User is deactivated, log them out
+      await signOut(auth);
+      setUserProfile(null);
+      localStorage.removeItem('token');
+      toast.error('Your account has been deactivated.');
+    }
+    return Promise.reject(error);
+  }
+);
+
 const AuthContext = createContext();
 
 export const useAuth = () => {
@@ -28,6 +43,41 @@ export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState(null);
+
+  // Firebase logout
+  const logout = async (showToast = true) => {
+    try {
+      await signOut(auth);
+      setUserProfile(null);
+      localStorage.removeItem('token');
+      if (showToast) {
+        toast.success('Logged out successfully');
+      }
+    } catch (error) {
+      if (showToast) {
+        toast.error('Error logging out');
+      }
+      throw error;
+    }
+  };
+
+  // Axios interceptor for handling 403 errors
+  useEffect(() => {
+    const interceptor = axios.interceptors.response.use(
+      (response) => response,
+      async (error) => {
+        if (error.response && error.response.status === 403 && error.response.data?.message?.includes('deactivated')) {
+          // User is deactivated, log them out
+          await logout(false);
+        }
+        return Promise.reject(error);
+      }
+    );
+
+    return () => {
+      axios.interceptors.response.eject(interceptor);
+    };
+  }, []);
 
   // Firebase signup
   const signup = async (email, password, name) => {
@@ -82,23 +132,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Firebase logout
-  const logout = async (showToast = true) => {
-    try {
-      await signOut(auth);
-      setUserProfile(null);
-      localStorage.removeItem('token');
-      if (showToast) {
-        toast.success('Logged out successfully');
-      }
-    } catch (error) {
-      if (showToast) {
-        toast.error('Error logging out');
-      }
-      throw error;
-    }
-  };
-
   // Update user password in Firebase
   const updateUserPassword = async (newPassword) => {
     try {
@@ -123,6 +156,12 @@ export const AuthProvider = ({ children }) => {
       return data.user;
     } catch (error) {
       console.error('Error fetching user profile:', error);
+      if (error.response && error.response.status === 403 && error.response.data?.message?.includes('deactivated')) {
+        // User is deactivated, log them out
+        await logout(false);
+        toast.error('Your account has been deactivated.');
+      }
+      throw error;
     }
   };
 

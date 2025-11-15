@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -15,10 +15,19 @@ import {
 } from 'lucide-react';
 
 const AdminLayout = ({ children }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  // Load sidebar state from localStorage
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    const saved = localStorage.getItem('adminSidebarOpen');
+    return saved !== null ? JSON.parse(saved) : true;
+  });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
+
+  // Save sidebar state to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('adminSidebarOpen', JSON.stringify(sidebarOpen));
+  }, [sidebarOpen]);
 
   const menuItems = [
     {
@@ -31,7 +40,7 @@ const AdminLayout = ({ children }) => {
       name: 'Users',
       path: '/admin/users',
       icon: Users,
-      active: false,
+      active: true,
     },
     {
       name: 'Products',
@@ -71,36 +80,53 @@ const AdminLayout = ({ children }) => {
         }`}
       >
         {/* Logo and Toggle */}
-        <div className="flex items-center justify-between p-4 border-b border-blue-700">
-          {sidebarOpen && (
-            <div className="flex items-center space-x-2">
-              <Package className="w-8 h-8" />
+        <div className={`flex items-center p-4 border-b border-blue-700 relative ${sidebarOpen ? '' : 'justify-center'}`}>
+          {sidebarOpen ? (
+            <>
+              <Package className="w-7 h-7 text-white mr-2" />
               <span className="text-xl font-bold">LappyShoppy</span>
-            </div>
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="ml-auto flex items-center justify-center p-2 rounded-lg hover:bg-blue-700 transition-colors"
+                aria-label="Minimize sidebar"
+                style={{ minWidth: 40, minHeight: 40, maxWidth: 40, maxHeight: 40 }}
+              >
+                <ChevronLeft className="w-5 h-5 mx-auto" />
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="flex items-center justify-center p-2 rounded-lg bg-transparent hover:bg-blue-700 transition-colors mx-auto"
+                aria-label="Expand sidebar"
+                style={{ minWidth: 40, minHeight: 40, maxWidth: 40, maxHeight: 40 }}
+              >
+                <Package className="w-7 h-7 text-white" />
+              </button>
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="absolute right-4 flex items-center justify-center p-2 rounded-lg bg-blue-600 hover:bg-blue-700 transition-colors"
+                aria-label="Expand sidebar"
+                style={{ minWidth: 40, minHeight: 40, maxWidth: 40, maxHeight: 40 }}
+              >
+                <ChevronRight className="w-5 h-5 mx-auto" />
+              </button>
+            </>
           )}
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 rounded-lg hover:bg-blue-700 transition-colors ml-auto"
-          >
-            {sidebarOpen ? (
-              <ChevronLeft className="w-5 h-5" />
-            ) : (
-              <ChevronRight className="w-5 h-5" />
-            )}
-          </button>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+        <nav className="flex-1 overflow-y-auto">
           {menuItems.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
               className={({ isActive }) =>
-                `flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+                `flex items-center ${sidebarOpen ? 'space-x-3 px-4' : 'justify-center px-0'} py-3 transition-all duration-200 ${
                   isActive
-                    ? 'bg-blue-700 shadow-lg'
-                    : 'hover:bg-blue-700/50'
+                    ? 'bg-blue-700 shadow-lg border-l-4 border-white'
+                    : 'hover:bg-blue-700/50 border-l-4 border-transparent'
                 } ${!item.active ? 'opacity-50 cursor-not-allowed' : ''}`
               }
               onClick={(e) => {
@@ -109,7 +135,7 @@ const AdminLayout = ({ children }) => {
                 }
               }}
             >
-              <item.icon className={`${sidebarOpen ? 'w-5 h-5' : 'w-6 h-6'} flex-shrink-0`} />
+              <item.icon className="w-5 h-5 flex-shrink-0" />
               {sidebarOpen && (
                 <div className="flex items-center justify-between flex-1">
                   <span className="font-medium">{item.name}</span>
@@ -123,9 +149,9 @@ const AdminLayout = ({ children }) => {
         </nav>
 
         {/* User Profile */}
-        <div className="border-t border-blue-700 p-4">
+        <div className="border-t border-blue-700 p-4 flex flex-col items-center">
           {sidebarOpen ? (
-            <div className="space-y-3">
+            <div className="space-y-3 w-full">
               <button
                 onClick={() => navigate('/profile')}
                 className="w-full flex items-center space-x-3 p-2 rounded-lg hover:bg-blue-700 transition-colors"
@@ -161,12 +187,32 @@ const AdminLayout = ({ children }) => {
               </button>
             </div>
           ) : (
-            <button
-              onClick={handleLogout}
-              className="w-full p-2 bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
-            >
-              <LogOut className="w-6 h-6 mx-auto" />
-            </button>
+            <div className="flex flex-col items-center space-y-3 w-full">
+              <button
+                onClick={() => navigate('/profile')}
+                className="w-10 h-10 rounded-full bg-blue-900 flex items-center justify-center overflow-hidden hover:ring-2 hover:ring-blue-400 transition-all"
+                aria-label="Go to profile"
+              >
+                {currentUser?.photoURL ? (
+                  <img 
+                    src={currentUser.photoURL} 
+                    alt="Profile" 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-lg font-bold text-white">
+                    {currentUser?.displayName?.charAt(0) || 'A'}
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={handleLogout}
+                className="w-full p-2 bg-red-600 hover:bg-red-700 rounded-lg transition-colors flex items-center justify-center"
+                style={{ minHeight: 40 }}
+              >
+                <LogOut className="w-6 h-6 mx-auto" />
+              </button>
+            </div>
           )}
         </div>
       </aside>

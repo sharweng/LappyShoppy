@@ -195,17 +195,15 @@ exports.loginUser = async (req, res, next) => {
     if (!user) {
         return res.status(401).json({ message: 'Invalid Email/Username or Password' })
     }
-
-
+    if (user.isDeactivated) {
+        return res.status(403).json({ message: 'User account is deactivated.' });
+    }
     // Checks if password is correct or not
     const isPasswordMatched = await user.comparePassword(password);
-
-
     if (!isPasswordMatched) {
         return res.status(401).json({ message: 'Invalid Email/Username or Password' })
     }
     const token = user.getJwtToken();
-
     res.status(201).json({
         success: true,
         token,
@@ -458,8 +456,9 @@ exports.resetPasswordWithFirebase = async (req, res, next) => {
 
 exports.getUserProfile = async (req, res, next) => {
     const user = await User.findById(req.user.id);
-    console.log(user)
-
+    if (user && user.isDeactivated) {
+        return res.status(403).json({ success: false, message: 'User account is deactivated.' });
+    }
     return res.status(200).json({
         success: true,
         user
