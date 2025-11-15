@@ -4,7 +4,20 @@ const Order = require('../models/order');
 const cloudinary = require('cloudinary')
 const APIFeatures = require('../utils/apiFeatures');
 
+// Initialize bad words filter
+let filter = null;
 
+// Dynamically import bad-words module (ES module)
+const initializeFilter = async () => {
+	if (!filter) {
+		const { Filter } = await import('bad-words');
+		filter = new Filter();
+	}
+	return filter;
+};
+
+// Call this once to initialize
+initializeFilter();
 
 exports.newProduct = async (req, res, next) => {
 console.log(req.files)
@@ -273,6 +286,9 @@ exports.productSales = async (req, res, next) => {
 
 exports.createProductReview = async (req, res, next) => {
 	const { rating, comment, productId, isAnonymous } = req.body;
+	
+	// Ensure filter is initialized
+	await initializeFilter();
 
 	// Check if user has a delivered order containing this product
 	const deliveredOrder = await Order.findOne({
@@ -292,7 +308,7 @@ exports.createProductReview = async (req, res, next) => {
 		user: req.user._id,
 		name: req.user.name,
 		rating: Number(rating),
-		comment: comment || '',
+		comment: filter.clean(comment || ''),
 		isAnonymous: isAnonymous || false
 	}
 	const product = await Product.findById(productId);
@@ -310,16 +326,19 @@ exports.createProductReview = async (req, res, next) => {
 	if (isReviewed) {
 		product.reviews.forEach(review => {
 			if (review.user.toString() === req.user._id.toString()) {
-				review.comment = comment || '';
+				review.comment = filter.clean(comment || '');
 				review.rating = rating;
 				review.isAnonymous = isAnonymous || false;
 			}
 		})
 	} else {
 		product.reviews.push(review);
-		product.numOfReviews = product.reviews.length
 	}
-	product.ratings = product.reviews.reduce((acc, item) => item.rating + acc, 0) / product.reviews.length
+	
+	// Always recalculate ratings and numOfReviews
+	product.numOfReviews = product.reviews.length;
+	product.ratings = product.reviews.reduce((acc, item) => item.rating + acc, 0) / product.reviews.length;
+	
 	await product.save({ validateBeforeSave: false });
 	if (!product)
 		return res.status(400).json({

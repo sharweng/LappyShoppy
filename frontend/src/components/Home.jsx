@@ -30,7 +30,8 @@ const Home = () => {
            filters.screenSize !== '' || 
            filters.graphics !== '' || 
            filters.operatingSystem !== '' || 
-           filters.rating > 0;
+           filters.minRating > 0 ||
+           filters.maxRating < 5;
   };
 
   // Filter states
@@ -52,7 +53,8 @@ const Home = () => {
     screenSize: '',
     graphics: '',
     operatingSystem: '',
-    rating: 0
+    minRating: 0,
+    maxRating: 5
   });
 
   // Expandable filter sections
@@ -94,7 +96,8 @@ const Home = () => {
       if (filters.screenSize) params.append('screenSize', filters.screenSize);
       if (filters.graphics) params.append('graphics', filters.graphics);
       if (filters.operatingSystem) params.append('operatingSystem', filters.operatingSystem);
-      if (filters.rating > 0) params.append('ratings[gte]', filters.rating);
+      if (filters.minRating > 0) params.append('ratings[gte]', filters.minRating);
+      if (filters.maxRating < 5) params.append('ratings[lte]', filters.maxRating);
 
       const { data } = await axios.get(`${API_URL}/products?${params.toString()}`);
       
@@ -153,7 +156,8 @@ const Home = () => {
       screenSize: '',
       graphics: '',
       operatingSystem: '',
-      rating: 0
+      minRating: 0,
+      maxRating: 5
     };
     setFilters(clearedFilters);
     setProducts([]);
@@ -449,41 +453,58 @@ const Home = () => {
                       onClick={() => toggleSection('rating')}
                       className="flex justify-between items-center w-full mb-2"
                     >
-                      <h4 className="font-semibold text-sm text-gray-900">Min Rating</h4>
+                      <h4 className="font-semibold text-sm text-gray-900">Rating Range</h4>
                       {expandedSections.rating ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                     </button>
                     {expandedSections.rating && (
-                      <div className="space-y-1.5">
-                        {[4, 3, 2, 1].map((rating) => (
-                          <label key={rating} className="flex items-center space-x-2 cursor-pointer">
-                            <input
-                              type="radio"
-                              name="rating"
-                              checked={filters.rating === rating}
-                              onChange={() => handleFilterChange('rating', rating)}
-                              className="text-blue-600 focus:ring-blue-500 w-3.5 h-3.5"
-                            />
-                            <div className="flex items-center">
-                              {[...Array(rating)].map((_, i) => (
-                                <Star key={i} className="w-3 h-3 fill-yellow-500 text-yellow-500" />
-                              ))}
-                              <span className="text-xs text-gray-700 ml-1">& up</span>
-                            </div>
-                          </label>
-                        ))}
-                        <label className="flex items-center space-x-2 cursor-pointer">
-                          <input
-                            type="radio"
-                            name="rating"
-                            checked={filters.rating === 0}
-                            onChange={() => handleFilterChange('rating', 0)}
-                            className="text-blue-600 focus:ring-blue-500 w-3.5 h-3.5"
-                          />
-                          <span className="text-xs text-gray-700">All</span>
-                        </label>
-                        <p className="text-[10px] text-gray-500 italic mt-1">
-                          * Coming soon
-                        </p>
+                      <div className="space-y-3">
+                        {/* Min Rating */}
+                        <div>
+                          <label className="text-xs font-semibold text-gray-700 mb-2 block">Min Rating</label>
+                          <div className="flex space-x-1">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <button
+                                key={`min-${star}`}
+                                type="button"
+                                onClick={() => handleFilterChange('minRating', star)}
+                                className="focus:outline-none transition-transform hover:scale-110"
+                                title={`${star} stars & up`}
+                              >
+                                <Star
+                                  className={`w-6 h-6 ${
+                                    star <= filters.minRating && filters.minRating > 0
+                                      ? 'fill-yellow-500 text-yellow-500'
+                                      : 'text-gray-300'
+                                  }`}
+                                />
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Max Rating */}
+                        <div>
+                          <label className="text-xs font-semibold text-gray-700 mb-2 block">Max Rating</label>
+                          <div className="flex space-x-1">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <button
+                                key={`max-${star}`}
+                                type="button"
+                                onClick={() => handleFilterChange('maxRating', star)}
+                                className="focus:outline-none transition-transform hover:scale-110"
+                                title={`${star} stars & below`}
+                              >
+                                <Star
+                                  className={`w-6 h-6 ${
+                                    star <= filters.maxRating
+                                      ? 'fill-yellow-500 text-yellow-500'
+                                      : 'text-gray-300'
+                                  }`}
+                                />
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>

@@ -51,9 +51,16 @@ class APIFeatures {
         });
 
         // Handle rating filter
-        if (queryCopy['ratings[gte]']) {
-            filterQuery.ratings = { $gte: Number(queryCopy['ratings[gte]']) };
+        if (queryCopy['ratings[gte]'] || queryCopy['ratings[lte]']) {
+            filterQuery.ratings = {};
+            if (queryCopy['ratings[gte]']) {
+                filterQuery.ratings.$gte = Number(queryCopy['ratings[gte]']);
+            }
+            if (queryCopy['ratings[lte]']) {
+                filterQuery.ratings.$lte = Number(queryCopy['ratings[lte]']);
+            }
             delete queryCopy['ratings[gte]'];
+            delete queryCopy['ratings[lte]'];
         }
 
         console.log('Filter Query:', filterQuery);
