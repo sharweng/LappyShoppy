@@ -3,6 +3,9 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import axios from 'axios';
+import { useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import * as yup from 'yup';
 import { 
   Laptop, 
   Star, 
@@ -27,6 +30,17 @@ import { toast } from 'react-toastify';
 
 const API_URL = 'http://localhost:4001/api/v1';
 
+// Yup validation schema for review form
+const reviewSchema = yup.object().shape({
+  rating: yup.number()
+    .required('Rating is required')
+    .min(1, 'Rating must be at least 1')
+    .max(5, 'Rating cannot exceed 5'),
+  comment: yup.string()
+    .max(500, 'Comment cannot exceed 500 characters'),
+  isAnonymous: yup.boolean()
+});
+
 const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -45,14 +59,24 @@ const ProductDetail = () => {
   const [hasReview, setHasReview] = useState(false);
   const [userReview, setUserReview] = useState(null);
   const [showReviewForm, setShowReviewForm] = useState(false);
-  const [reviewRating, setReviewRating] = useState(5);
-  const [reviewComment, setReviewComment] = useState('');
-  const [submittingReview, setSubmittingReview] = useState(false);
   const [editingReview, setEditingReview] = useState(false);
-  const [isAnonymous, setIsAnonymous] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [reviewToDelete, setReviewToDelete] = useState(null);
   const [reviewFilter, setReviewFilter] = useState('all');
+
+  // React Hook Form for review
+  const { register, handleSubmit, formState: { errors, isSubmitting }, setValue, reset, watch } = useForm({
+    resolver: yupResolver(reviewSchema),
+    mode: 'onBlur',
+    defaultValues: {
+      rating: 5,
+      comment: '',
+      isAnonymous: false
+    }
+  });
+
+  // Watch rating to show star selection
+  const currentRating = watch('rating');
 
   useEffect(() => {
     fetchProduct();
@@ -135,9 +159,12 @@ const ProductDetail = () => {
       setHasReview(data.hasReview);
       if (data.hasReview && data.review) {
         setUserReview(data.review);
-        setReviewRating(data.review.rating);
-        setReviewComment(data.review.comment || '');
-        setIsAnonymous(data.review.isAnonymous || false);
+        // Populate form with existing review
+        reset({
+          rating: data.review.rating,
+          comment: data.review.comment || '',
+          isAnonymous: data.review.isAnonymous || false
+        });
       }
     } catch (err) {
       console.error('Error checking review eligibility:', err);
@@ -175,15 +202,13 @@ const ProductDetail = () => {
     }
   };
 
-  const handleSubmitReview = async (e) => {
-    e.preventDefault();
+  const handleSubmitReview = async (formData) => {
     if (!currentUser) {
       toast.info('Please login to submit a review');
       navigate('/login');
       return;
     }
 
-    setSubmittingReview(true);
     try {
       const token = await currentUser.getIdToken();
       const config = {
@@ -194,15 +219,18 @@ const ProductDetail = () => {
       };
 
       await axios.put(`${API_URL}/review`, {
-        rating: reviewRating,
-        comment: reviewComment.trim(),
+        rating: formData.rating,
+        comment: formData.comment?.trim() || '',
         productId: id,
-        isAnonymous: isAnonymous
+        isAnonymous: formData.isAnonymous
       }, config);
 
       toast.success(editingReview ? 'Review updated successfully' : 'Review submitted successfully');
       setShowReviewForm(false);
       setEditingReview(false);
+      
+      // Reset form
+      reset({ rating: 5, comment: '', isAnonymous: false });
       
       // Refresh product and reviews
       await fetchProduct();
@@ -210,8 +238,6 @@ const ProductDetail = () => {
       await fetchReviews();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to submit review');
-    } finally {
-      setSubmittingReview(false);
     }
   };
 
@@ -230,9 +256,7 @@ const ProductDetail = () => {
       toast.success('Review deleted successfully');
       
       // Reset review form
-      setReviewRating(5);
-      setReviewComment('');
-      setIsAnonymous(false);
+      reset({ rating: 5, comment: '', isAnonymous: false });
       setEditingReview(false);
       setShowReviewForm(false);
       setShowDeleteModal(false);
@@ -255,6 +279,12 @@ const ProductDetail = () => {
   };
 
   const handleEditReview = () => {
+    // Populate form with existing review data
+    reset({
+      rating: userReview?.rating || 5,
+      comment: userReview?.comment || '',
+      isAnonymous: userReview?.isAnonymous || false
+    });
     setEditingReview(true);
     setShowReviewForm(true);
   };
@@ -667,7 +697,7 @@ const ProductDetail = () => {
                 <h3 className="text-base font-bold text-gray-900 mb-3">
                   {editingReview ? 'Edit Your Review' : 'Write Your Review'}
                 </h3>
-                <form onSubmit={handleSubmitReview}>
+                <form onSubmit={handleSubmit(handleSubmitReview)}>
                   <div className="mb-3">
                     <label className="block text-xs font-semibold text-gray-700 mb-1">Rating</label>
                     <div className="flex space-x-1">
@@ -675,12 +705,12 @@ const ProductDetail = () => {
                         <button
                           key={star}
                           type="button"
-                          onClick={() => setReviewRating(star)}
+                          onClick={() => setValue('rating', star)}
                           className="focus:outline-none transition-transform hover:scale-110"
                         >
                           <Star
                             className={`w-6 h-6 ${
-                              star <= reviewRating
+                              star <= currentRating
                                 ? 'fill-yellow-500 text-yellow-500'
                                 : 'text-gray-300'
                             }`}
@@ -688,23 +718,31 @@ const ProductDetail = () => {
                         </button>
                       ))}
                     </div>
+                    {errors.rating && (
+                      <p className="mt-1 text-xs text-red-600">{errors.rating.message}</p>
+                    )}
                   </div>
                   <div className="mb-3">
                     <label className="block text-xs font-semibold text-gray-700 mb-1">Comment (Optional)</label>
                     <textarea
-                      value={reviewComment}
-                      onChange={(e) => setReviewComment(e.target.value)}
+                      {...register('comment')}
                       rows="3"
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className={`w-full px-3 py-2 text-sm border ${
+                        errors.comment ? 'border-red-500' : 'border-gray-300'
+                      } rounded-lg focus:outline-none focus:ring-2 ${
+                        errors.comment ? 'focus:ring-red-500' : 'focus:ring-blue-500'
+                      } transition-colors`}
                       placeholder="Share your experience with this product..."
                     ></textarea>
+                    {errors.comment && (
+                      <p className="mt-1 text-xs text-red-600">{errors.comment.message}</p>
+                    )}
                   </div>
                   <div className="mb-3">
                     <label className="flex items-center space-x-2 cursor-pointer">
                       <input
                         type="checkbox"
-                        checked={isAnonymous}
-                        onChange={(e) => setIsAnonymous(e.target.checked)}
+                        {...register('isAnonymous')}
                         className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                       />
                       <span className="text-xs text-gray-700">Post as anonymous</span>
@@ -713,10 +751,10 @@ const ProductDetail = () => {
                   <div className="flex space-x-2">
                     <button
                       type="submit"
-                      disabled={submittingReview}
+                      disabled={isSubmitting}
                       className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 text-sm rounded-lg font-semibold transition duration-300 disabled:bg-gray-400"
                     >
-                      {submittingReview ? 'Submitting...' : editingReview ? 'Update' : 'Submit'}
+                      {isSubmitting ? 'Submitting...' : editingReview ? 'Update' : 'Submit'}
                     </button>
                     <button
                       type="button"
@@ -724,9 +762,7 @@ const ProductDetail = () => {
                         setShowReviewForm(false);
                         setEditingReview(false);
                         if (!hasReview) {
-                          setReviewRating(5);
-                          setReviewComment('');
-                          setIsAnonymous(false);
+                          reset({ rating: 5, comment: '', isAnonymous: false });
                         }
                       }}
                       className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-1.5 text-sm rounded-lg font-semibold transition duration-300"
@@ -778,7 +814,7 @@ const ProductDetail = () => {
               <div className="space-y-4">
                 {getSortedAndFilteredReviews().map((review) => {
                   const isUserReview = isCurrentUserReview(review);
-                  const displayName = review.isAnonymous ? formatAnonymousName(review.name) : review.name;
+                  const displayName = review.isAnonymous ? formatAnonymousName(review.username) : review.username;
                   return (
                     <div 
                       key={review._id} 

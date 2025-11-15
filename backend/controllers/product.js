@@ -40,8 +40,8 @@ console.log(req.files)
 		try {
 			const result = await cloudinary.v2.uploader.upload(images[i], {
 				folder: 'products',
-				width: 150,
-				crop: "scale",
+				quality: 'auto:best',
+				fetch_format: 'auto'
 			});
 
 			imagesLinks.push({
@@ -130,8 +130,8 @@ exports.updateProduct = async (req, res, next) => {
     for (let i = 0; i < images.length; i++) {
         const result = await cloudinary.v2.uploader.upload(images[i], {
             folder: 'products',
-            width: 150,
-            crop: "scale",
+            quality: 'auto:best',
+            fetch_format: 'auto'
         });
         imagesLinks.push({
             public_id: result.public_id,
@@ -306,7 +306,7 @@ exports.createProductReview = async (req, res, next) => {
 
 	const review = {
 		user: req.user._id,
-		name: req.user.name,
+		username: req.user.username,
 		rating: Number(rating),
 		comment: filter.clean(comment || ''),
 		isAnonymous: isAnonymous || false

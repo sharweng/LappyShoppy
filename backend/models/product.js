@@ -97,7 +97,7 @@ const productSchema = new mongoose.Schema({
                 ref: 'User',
                 required: true
             },
-            name: {
+            username: {
                 type: String,
                 required: true
             },

@@ -38,12 +38,12 @@ import { toast } from 'react-toastify';
 
 const API_URL = 'http://localhost:4001/api/v1';
 
-// Format anonymous name
-const formatAnonymousName = (name) => {
-  if (!name || name.length === 0) return 'Anonymous';
-  if (name.length === 1) return name;
-  const firstLetter = name.charAt(0);
-  const lastLetter = name.charAt(name.length - 1);
+// Format anonymous username
+const formatAnonymousName = (username) => {
+  if (!username || username.length === 0) return 'Anonymous';
+  if (username.length === 1) return username;
+  const firstLetter = username.charAt(0);
+  const lastLetter = username.charAt(username.length - 1);
   return `${firstLetter}*****${lastLetter}`;
 };
 
@@ -83,7 +83,7 @@ function ReviewRow({ row, onDelete, isSelected, onSelectChange }) {
     }
   };
 
-  const displayName = row.isAnonymous ? formatAnonymousName(row.name) : row.name;
+  const displayName = row.isAnonymous ? formatAnonymousName(row.username) : row.username;
 
   return (
     <>
@@ -190,7 +190,7 @@ function ReviewRow({ row, onDelete, isSelected, onSelectChange }) {
                     Reviewer Information
                   </Typography>
                   <Typography variant="body2">
-                    <strong>Name:</strong> {row.name}
+                    <strong>Username:</strong> {row.username}
                   </Typography>
                   <Typography variant="body2">
                     <strong>Display Name:</strong> {displayName}
@@ -442,7 +442,7 @@ const ReviewList = () => {
     const searchLower = searchQuery.toLowerCase();
     return (
       review.product?.name.toLowerCase().includes(searchLower) ||
-      review.name.toLowerCase().includes(searchLower) ||
+      review.username?.toLowerCase().includes(searchLower) ||
       review.comment?.toLowerCase().includes(searchLower)
     );
   });
@@ -556,9 +556,9 @@ const ReviewList = () => {
                     </TableCell>
                     <TableCell sx={{ width: 150, fontWeight: 600 }}>
                       <TableSortLabel
-                        active={orderBy === 'name'}
-                        direction={orderBy === 'name' ? order : 'asc'}
-                        onClick={(e) => handleRequestSort(e, 'name')}
+                        active={orderBy === 'username'}
+                        direction={orderBy === 'username' ? order : 'asc'}
+                        onClick={(e) => handleRequestSort(e, 'username')}
                         hideSortIcon={false}
                         sx={{
                           '& .MuiTableSortLabel-icon': {

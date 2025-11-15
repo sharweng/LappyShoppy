@@ -3,6 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import AdminLayout from './AdminLayout';
 import axios from 'axios';
+import { useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import * as yup from 'yup';
 import {
   Box,
   TextField,
@@ -20,6 +23,7 @@ import {
   ImageListItem,
   ImageListItemBar,
   CircularProgress,
+  FormHelperText,
 } from '@mui/material';
 import {
   CloudUpload as CloudUploadIcon,
@@ -30,19 +34,51 @@ import {
 const API_URL = 'http://localhost:4001/api/v1';
 
 const categories = [
-  'Electronics',
-  'Cameras',
-  'Laptops',
-  'Accessories',
-  'Headphones',
-  'Food',
-  'Books',
-  'Clothes/Shoes',
-  'Beauty/Health',
-  'Sports',
-  'Outdoor',
-  'Home',
+  'Business Laptop',
+  'Gaming Laptop',
+  'Chromebooks',
+  'Convertible Laptops'
 ];
+
+// Yup validation schema
+const productSchema = yup.object().shape({
+  name: yup.string()
+    .required('Product name is required')
+    .min(3, 'Product name must be at least 3 characters'),
+  price: yup.number()
+    .required('Price is required')
+    .positive('Price must be a positive number')
+    .typeError('Price must be a number'),
+  description: yup.string()
+    .required('Description is required')
+    .min(10, 'Description must be at least 10 characters'),
+  brand: yup.string()
+    .required('Brand is required')
+    .min(2, 'Brand must be at least 2 characters'),
+  processor: yup.string()
+    .required('Processor is required')
+    .min(3, 'Processor must be at least 3 characters'),
+  ram: yup.string()
+    .required('RAM is required'),
+  storage: yup.string()
+    .required('Storage is required'),
+  screenSize: yup.string()
+    .required('Screen size is required'),
+  graphics: yup.string()
+    .required('Graphics is required'),
+  operatingSystem: yup.string()
+    .required('Operating system is required'),
+  category: yup.string()
+    .required('Category is required'),
+  seller: yup.string()
+    .required('Seller is required')
+    .min(2, 'Seller must be at least 2 characters'),
+  stock: yup.number()
+    .required('Stock is required')
+    .integer('Stock must be a whole number')
+    .min(0, 'Stock cannot be negative')
+    .typeError('Stock must be a number'),
+});
 
 const ProductForm = () => {
   const navigate = useNavigate();
@@ -55,20 +91,24 @@ const ProductForm = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const [formData, setFormData] = useState({
-    name: '',
-    price: '',
-    description: '',
-    brand: '',
-    processor: '',
-    ram: '',
-    storage: '',
-    screenSize: '',
-    graphics: 'Integrated',
-    operatingSystem: 'Windows 11',
-    category: 'Laptops',
-    seller: '',
-    stock: '',
+  const { register, handleSubmit, formState: { errors, isSubmitting }, setValue, reset } = useForm({
+    resolver: yupResolver(productSchema),
+    mode: 'onBlur',
+    defaultValues: {
+      name: '',
+      price: '',
+      description: '',
+      brand: '',
+      processor: '',
+      ram: '',
+      storage: '',
+      screenSize: '',
+      graphics: 'Integrated',
+      operatingSystem: 'Windows 11',
+      category: 'Gaming Laptop',
+      seller: '',
+      stock: '',
+    }
   });
 
   const [images, setImages] = useState([]);
@@ -103,7 +143,8 @@ const ProductForm = () => {
       const { data } = await axios.get(`${API_URL}/product/${id}`);
       const product = data.product;
 
-      setFormData({
+      // Use reset to populate form with fetched data
+      reset({
         name: product.name || '',
         price: product.price || '',
         description: product.description || '',
@@ -126,14 +167,6 @@ const ProductForm = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
   };
 
   const handleImageChange = (e) => {
@@ -160,17 +193,11 @@ const ProductForm = () => {
     setExistingImages((prevImages) => prevImages.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const onSubmit = async (formData) => {
     setError('');
     setSuccess('');
 
-    // Validation
-    if (!formData.name || !formData.price || !formData.brand || !formData.processor) {
-      setError('Please fill in all required fields');
-      return;
-    }
-
+    // Additional image validation
     if (!isEditMode && images.length === 0) {
       setError('Please upload at least one image');
       return;
@@ -257,24 +284,24 @@ const ProductForm = () => {
         )}
 
         <Paper sx={{ p: 4 }}>
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit(onSubmit)}>
             {/* Basic Information Section */}
-            <Box sx={{ mb: 4 }}>
-              <Typography variant="h6" gutterBottom sx={{ color: 'primary.main', fontWeight: 600, mb: 3 }}>
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="h6" gutterBottom sx={{ color: 'primary.main', fontWeight: 600, mb: 2 }}>
                 Basic Information
               </Typography>
               
-              <Grid container spacing={3}>
+              <Grid container spacing={2}>
                 {/* Row 1: Name, Brand, Price */}
                 <Grid item xs={12} md={4}>
                   <TextField
                     fullWidth
                     label="Product Name"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    required
+                    {...register('name')}
+                    error={!!errors.name}
+                    helperText={errors.name?.message}
                     variant="outlined"
+                    size="small"
                     placeholder="Enter product name"
                   />
                 </Grid>
@@ -283,11 +310,11 @@ const ProductForm = () => {
                   <TextField
                     fullWidth
                     label="Brand"
-                    name="brand"
-                    value={formData.brand}
-                    onChange={handleInputChange}
-                    required
+                    {...register('brand')}
+                    error={!!errors.brand}
+                    helperText={errors.brand?.message}
                     variant="outlined"
+                    size="small"
                     placeholder="e.g., Dell, HP, Lenovo"
                   />
                 </Grid>
@@ -296,14 +323,14 @@ const ProductForm = () => {
                   <TextField
                     fullWidth
                     label="Price (PHP)"
-                    name="price"
-                    type="number"
-                    value={formData.price}
-                    onChange={handleInputChange}
-                    required
+                    {...register('price')}
+                    error={!!errors.price}
+                    helperText={errors.price?.message}
                     variant="outlined"
+                    size="small"
                     InputProps={{ startAdornment: '₱' }}
                     placeholder="0.00"
+                    inputProps={{ inputMode: 'decimal' }}
                   />
                 </Grid>
 
@@ -312,24 +339,23 @@ const ProductForm = () => {
                   <TextField
                     fullWidth
                     label="Stock"
-                    name="stock"
-                    type="number"
-                    value={formData.stock}
-                    onChange={handleInputChange}
-                    required
+                    {...register('stock')}
+                    error={!!errors.stock}
+                    helperText={errors.stock?.message}
                     variant="outlined"
+                    size="small"
                     placeholder="Available quantity"
+                    inputProps={{ inputMode: 'numeric' }}
                   />
                 </Grid>
 
                 <Grid item xs={12} md={4}>
-                  <FormControl fullWidth variant="outlined">
+                  <FormControl fullWidth variant="outlined" error={!!errors.category} size="small">
                     <InputLabel>Category</InputLabel>
                     <Select
-                      name="category"
-                      value={formData.category}
-                      onChange={handleInputChange}
+                      {...register('category')}
                       label="Category"
+                      defaultValue="Gaming Laptop"
                     >
                       {categories.map((category) => (
                         <MenuItem key={category} value={category}>
@@ -337,6 +363,7 @@ const ProductForm = () => {
                         </MenuItem>
                       ))}
                     </Select>
+                    {errors.category && <FormHelperText>{errors.category.message}</FormHelperText>}
                   </FormControl>
                 </Grid>
 
@@ -344,11 +371,11 @@ const ProductForm = () => {
                   <TextField
                     fullWidth
                     label="Seller"
-                    name="seller"
-                    value={formData.seller}
-                    onChange={handleInputChange}
-                    required
+                    {...register('seller')}
+                    error={!!errors.seller}
+                    helperText={errors.seller?.message}
                     variant="outlined"
+                    size="small"
                     placeholder="Seller name or store"
                   />
                 </Grid>
@@ -356,39 +383,39 @@ const ProductForm = () => {
             </Box>
 
             {/* Description - Full Width Flexible */}
-            <Box sx={{ mb: 4 }}>
+            <Box sx={{ mb: 3 }}>
               <TextField
                 fullWidth
                 label="Description"
-                name="description"
-                value={formData.description}
-                onChange={handleInputChange}
-                required
+                {...register('description')}
+                error={!!errors.description}
+                helperText={errors.description?.message}
                 variant="outlined"
+                size="small"
                 multiline
-                minRows={4}
-                maxRows={8}
+                minRows={2}
+                maxRows={4}
                 placeholder="Enter detailed product description..."
               />
             </Box>
 
             {/* Laptop Specifications Section */}
-            <Box sx={{ mb: 4 }}>
-              <Typography variant="h6" gutterBottom sx={{ color: 'primary.main', fontWeight: 600, mb: 3 }}>
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="h6" gutterBottom sx={{ color: 'primary.main', fontWeight: 600, mb: 2 }}>
                 Laptop Specifications
               </Typography>
               
-              <Grid container spacing={3}>
+              <Grid container spacing={2}>
                 {/* Row 1: Processor, RAM, Storage */}
                 <Grid item xs={12} md={4}>
                   <TextField
                     fullWidth
                     label="Processor"
-                    name="processor"
-                    value={formData.processor}
-                    onChange={handleInputChange}
-                    required
+                    {...register('processor')}
+                    error={!!errors.processor}
+                    helperText={errors.processor?.message}
                     variant="outlined"
+                    size="small"
                     placeholder="e.g., Intel Core i7 13th Gen"
                   />
                 </Grid>
@@ -397,11 +424,11 @@ const ProductForm = () => {
                   <TextField
                     fullWidth
                     label="RAM"
-                    name="ram"
-                    value={formData.ram}
-                    onChange={handleInputChange}
-                    required
+                    {...register('ram')}
+                    error={!!errors.ram}
+                    helperText={errors.ram?.message}
                     variant="outlined"
+                    size="small"
                     placeholder="e.g., 16GB DDR5"
                   />
                 </Grid>
@@ -410,11 +437,11 @@ const ProductForm = () => {
                   <TextField
                     fullWidth
                     label="Storage"
-                    name="storage"
-                    value={formData.storage}
-                    onChange={handleInputChange}
-                    required
+                    {...register('storage')}
+                    error={!!errors.storage}
+                    helperText={errors.storage?.message}
                     variant="outlined"
+                    size="small"
                     placeholder="e.g., 512GB SSD"
                   />
                 </Grid>
@@ -424,11 +451,11 @@ const ProductForm = () => {
                   <TextField
                     fullWidth
                     label="Screen Size"
-                    name="screenSize"
-                    value={formData.screenSize}
-                    onChange={handleInputChange}
-                    required
+                    {...register('screenSize')}
+                    error={!!errors.screenSize}
+                    helperText={errors.screenSize?.message}
                     variant="outlined"
+                    size="small"
                     placeholder="e.g., 15.6 inch"
                   />
                 </Grid>
@@ -437,10 +464,11 @@ const ProductForm = () => {
                   <TextField
                     fullWidth
                     label="Graphics Card"
-                    name="graphics"
-                    value={formData.graphics}
-                    onChange={handleInputChange}
+                    {...register('graphics')}
+                    error={!!errors.graphics}
+                    helperText={errors.graphics?.message}
                     variant="outlined"
+                    size="small"
                     placeholder="e.g., NVIDIA GeForce RTX 3050"
                   />
                 </Grid>
@@ -449,10 +477,11 @@ const ProductForm = () => {
                   <TextField
                     fullWidth
                     label="Operating System"
-                    name="operatingSystem"
-                    value={formData.operatingSystem}
-                    onChange={handleInputChange}
+                    {...register('operatingSystem')}
+                    error={!!errors.operatingSystem}
+                    helperText={errors.operatingSystem?.message}
                     variant="outlined"
+                    size="small"
                     placeholder="e.g., Windows 11 Pro"
                   />
                 </Grid>
@@ -464,7 +493,7 @@ const ProductForm = () => {
               display: 'flex', 
               justifyContent: 'space-between',
               alignItems: 'center',
-              pt: 3,
+              pt: 2,
               borderTop: '1px solid',
               borderColor: 'divider',
               flexWrap: 'wrap',
@@ -472,20 +501,20 @@ const ProductForm = () => {
             }}>
               {/* Left: Product Images Upload */}
               <Box>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'text.primary', mb: 1.5 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'text.primary', mb: 1 }}>
                   Product Images
                 </Typography>
                 <Button
                   variant="contained"
                   component="label"
                   startIcon={<CloudUploadIcon />}
-                  size="large"
+                  size="medium"
                   sx={{ 
-                    py: 1.5,
-                    px: 4,
+                    py: 1,
+                    px: 3,
                     borderRadius: 2,
                     textTransform: 'none',
-                    fontSize: '1rem'
+                    fontSize: '0.95rem'
                   }}
                 >
                   Upload Images
@@ -505,12 +534,12 @@ const ProductForm = () => {
                   variant="outlined"
                   onClick={() => navigate('/admin/products')}
                   disabled={uploading}
-                  size="large"
+                  size="medium"
                   sx={{ 
-                    px: 4,
-                    py: 1.5,
+                    px: 3,
+                    py: 1,
                     textTransform: 'none',
-                    fontSize: '1rem'
+                    fontSize: '0.95rem'
                   }}
                 >
                   Cancel
@@ -518,17 +547,17 @@ const ProductForm = () => {
                 <Button
                   type="submit"
                   variant="contained"
-                  disabled={uploading}
-                  size="large"
-                  startIcon={uploading ? <CircularProgress size={20} /> : null}
+                  disabled={isSubmitting}
+                  size="medium"
+                  startIcon={isSubmitting ? <CircularProgress size={20} /> : null}
                   sx={{ 
-                    px: 4,
-                    py: 1.5,
+                    px: 3,
+                    py: 1,
                     textTransform: 'none',
-                    fontSize: '1rem'
+                    fontSize: '0.95rem'
                   }}
                 >
-                  {uploading
+                  {isSubmitting
                     ? 'Saving...'
                     : isEditMode
                     ? 'Update Product'
@@ -539,17 +568,17 @@ const ProductForm = () => {
 
             {/* Existing Images (Edit Mode) */}
             {existingImages.length > 0 && (
-              <Box sx={{ mt: 4 }}>
+              <Box sx={{ mt: 3 }}>
                 <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, color: 'text.primary' }}>
                   Current Images
                 </Typography>
-                <ImageList cols={4} gap={16} sx={{ mt: 1 }}>
+                <ImageList cols={4} gap={12} sx={{ mt: 1 }}>
                   {existingImages.map((image, index) => (
                     <ImageListItem key={index} sx={{ borderRadius: 2, overflow: 'hidden' }}>
                       <img
                         src={image.url}
                         alt={`Product ${index + 1}`}
-                        style={{ height: 180, objectFit: 'cover' }}
+                        style={{ height: 150, objectFit: 'cover' }}
                       />
                       <ImageListItemBar
                         actionIcon={
@@ -570,17 +599,17 @@ const ProductForm = () => {
 
             {/* New Images Preview */}
             {images.length > 0 && (
-              <Box sx={{ mt: 4 }}>
+              <Box sx={{ mt: 3 }}>
                 <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, color: 'text.primary' }}>
                   New Images ({images.length})
                 </Typography>
-                <ImageList cols={4} gap={16} sx={{ mt: 1 }}>
+                <ImageList cols={4} gap={12} sx={{ mt: 1 }}>
                   {images.map((image, index) => (
                     <ImageListItem key={index} sx={{ borderRadius: 2, overflow: 'hidden' }}>
                       <img
                         src={image}
                         alt={`Upload ${index + 1}`}
-                        style={{ height: 180, objectFit: 'cover' }}
+                        style={{ height: 150, objectFit: 'cover' }}
                       />
                       <ImageListItemBar
                         actionIcon={

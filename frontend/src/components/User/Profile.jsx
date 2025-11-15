@@ -4,29 +4,70 @@ import { toast } from 'react-toastify';
 import { updateProfile } from 'firebase/auth';
 import axios from 'axios';
 import AdminLayout from '../Admin/AdminLayout';
+import { useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import * as yup from 'yup';
+
+// Yup validation schemas
+const profileSchema = yup.object().shape({
+  displayName: yup
+    .string()
+    .required('Name is required')
+    .min(2, 'Name must be at least 2 characters')
+    .trim(),
+  username: yup
+    .string()
+    .required('Username is required')
+    .min(3, 'Username must be at least 3 characters')
+    .max(20, 'Username cannot exceed 20 characters')
+    .matches(/^\S+$/, 'Username cannot contain spaces')
+    .matches(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores')
+    .trim(),
+  email: yup
+    .string()
+    .email('Invalid email address')
+});
+
+const passwordSchema = yup.object().shape({
+  newPassword: yup
+    .string()
+    .required('New password is required')
+    .min(6, 'Password must be at least 6 characters'),
+  confirmPassword: yup
+    .string()
+    .required('Please confirm your password')
+    .oneOf([yup.ref('newPassword')], 'Passwords do not match')
+});
 
 const Profile = () => {
   const { currentUser, updateUserPassword } = useAuth();
-  const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
   const [isAdmin, setIsAdmin] = useState(false);
-  const [userData, setUserData] = useState(null); // Store MongoDB user data
-  const [isOAuthUser, setIsOAuthUser] = useState(false); // Track if user is OAuth user
-  
-  const [profileData, setProfileData] = useState({
-    displayName: '',
-    username: '',
-    email: '',
-    photoURL: ''
-  });
-
-  const [passwordData, setPasswordData] = useState({
-    newPassword: '',
-    confirmPassword: ''
-  });
-
+  const [userData, setUserData] = useState(null);
+  const [isOAuthUser, setIsOAuthUser] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
+
+  // Profile form
+  const profileForm = useForm({
+    resolver: yupResolver(profileSchema),
+    mode: 'onBlur',
+    defaultValues: {
+      displayName: '',
+      username: '',
+      email: ''
+    }
+  });
+
+  // Password form
+  const passwordForm = useForm({
+    resolver: yupResolver(passwordSchema),
+    mode: 'onBlur',
+    defaultValues: {
+      newPassword: '',
+      confirmPassword: ''
+    }
+  });
 
   useEffect(() => {
     if (currentUser) {
@@ -44,7 +85,6 @@ const Profile = () => {
           setUserData(data.user);
           
           // Check if user is OAuth user by checking Firebase provider data
-          // OAuth users sign in with Google/Facebook, regular users sign in with email/password
           const providers = currentUser.providerData || [];
           const isOAuth = providers.some(provider => 
             provider.providerId === 'google.com' || 
@@ -52,21 +92,19 @@ const Profile = () => {
           );
           setIsOAuthUser(isOAuth);
           
-          // Set profile data with MongoDB user data
-          setProfileData({
+          // Set profile form values
+          profileForm.reset({
             displayName: currentUser.displayName || '',
             username: data.user.username || '',
-            email: currentUser.email || '',
-            photoURL: currentUser.photoURL || data.user.avatar?.url || ''
+            email: currentUser.email || ''
           });
         } catch (error) {
           console.error('Error fetching user data:', error);
           // Fallback to Firebase data only
-          setProfileData({
+          profileForm.reset({
             displayName: currentUser.displayName || '',
             username: '',
-            email: currentUser.email || '',
-            photoURL: currentUser.photoURL || ''
+            email: currentUser.email || ''
           });
         }
       };
@@ -74,14 +112,6 @@ const Profile = () => {
       fetchUserData();
     }
   }, [currentUser]);
-
-  const handleProfileChange = (e) => {
-    setProfileData({ ...profileData, [e.target.name]: e.target.value });
-  };
-
-  const handlePasswordChange = (e) => {
-    setPasswordData({ ...passwordData, [e.target.name]: e.target.value });
-  };
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
@@ -93,7 +123,7 @@ const Profile = () => {
       
       const reader = new FileReader();
       reader.onloadend = () => {
-        setSelectedImage(reader.result); // Store base64 string
+        setSelectedImage(reader.result);
         setPreviewImage(reader.result);
       };
       reader.readAsDataURL(file);
@@ -135,59 +165,33 @@ const Profile = () => {
     }
   };
 
-  const handleProfileSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-
+  const onProfileSubmit = async (data) => {
     try {
-      // Validate username if changed
-      if (profileData.username !== userData?.username) {
-        if (profileData.username.length < 3) {
-          toast.error('Username must be at least 3 characters');
-          setLoading(false);
-          return;
-        }
-        if (profileData.username.length > 20) {
-          toast.error('Username cannot exceed 20 characters');
-          setLoading(false);
-          return;
-        }
-        if (/\s/.test(profileData.username)) {
-          toast.error('Username cannot contain spaces');
-          setLoading(false);
-          return;
-        }
-        if (!/^[a-zA-Z0-9_]+$/.test(profileData.username)) {
-          toast.error('Username can only contain letters, numbers, and underscores');
-          setLoading(false);
-          return;
-        }
-      }
-
-      let photoURL = profileData.photoURL;
+      const photoURL = currentUser.photoURL || userData?.avatar?.url || '';
+      let newPhotoURL = photoURL;
 
       // Upload new image if selected
       if (selectedImage) {
         toast.info('Uploading image... This may take a moment on slow connections.');
-        photoURL = await uploadToCloudinary(selectedImage);
+        newPhotoURL = await uploadToCloudinary(selectedImage);
       }
 
       // Update Firebase profile with display name and photo URL
       await updateProfile(currentUser, {
-        displayName: profileData.displayName,
-        photoURL: photoURL
+        displayName: data.displayName,
+        photoURL: newPhotoURL
       });
 
       // Update MongoDB profile (including username)
       const token = await currentUser.getIdToken();
       const updateData = {
-        name: profileData.displayName,
-        username: profileData.username
+        name: data.displayName,
+        username: data.username
       };
       
       // Only include avatar if it's a new base64 image upload
-      if (selectedImage && photoURL.startsWith('http')) {
-        updateData.avatar = photoURL;
+      if (selectedImage && newPhotoURL.startsWith('http')) {
+        updateData.avatar = newPhotoURL;
       }
 
       const response = await axios.put(
@@ -203,10 +207,10 @@ const Profile = () => {
 
       if (response.data.success) {
         setUserData(response.data.user);
-        setProfileData({ 
-          ...profileData, 
-          photoURL,
-          username: response.data.user.username 
+        profileForm.reset({
+          displayName: data.displayName,
+          username: response.data.user.username,
+          email: data.email
         });
         setSelectedImage(null);
         setPreviewImage(null);
@@ -218,31 +222,28 @@ const Profile = () => {
       }
     } catch (error) {
       console.error('Profile update error:', error);
-      const errorMessage = error.response?.data?.message || error.message || 'Failed to update profile';
-      toast.error(errorMessage);
-    } finally {
-      setLoading(false);
+      
+      // Handle specific error cases
+      if (error.response?.data?.message?.includes('Username already taken') || 
+          error.response?.data?.message?.includes('duplicate key error') && 
+          error.response?.data?.message?.includes('username')) {
+        profileForm.setError('username', {
+          type: 'manual',
+          message: 'Username already taken'
+        });
+        toast.error('Username already taken. Please choose another one.');
+      } else {
+        const errorMessage = error.response?.data?.message || error.message || 'Failed to update profile';
+        toast.error(errorMessage);
+      }
     }
   };
 
-  const handlePasswordSubmit = async (e) => {
-    e.preventDefault();
-
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      toast.error('Passwords do not match');
-      return;
-    }
-
-    if (passwordData.newPassword.length < 6) {
-      toast.error('Password must be at least 6 characters');
-      return;
-    }
-
-    setLoading(true);
-
+  const onPasswordSubmit = async (data) => {
     try {
-      await updateUserPassword(passwordData.newPassword);
-      setPasswordData({ newPassword: '', confirmPassword: '' });
+      await updateUserPassword(data.newPassword);
+      passwordForm.reset();
+      toast.success('Password updated successfully!');
     } catch (error) {
       console.error('Password update error:', error);
       if (error.code === 'auth/requires-recent-login') {
@@ -250,8 +251,6 @@ const Profile = () => {
       } else {
         toast.error('Failed to update password');
       }
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -263,9 +262,9 @@ const Profile = () => {
           <div className="bg-gradient-to-r from-blue-600 to-blue-800 px-6 py-8">
             <div className="flex items-center space-x-4">
               <div className="relative">
-                {profileData.photoURL || previewImage ? (
+                {(currentUser?.photoURL || userData?.avatar?.url || previewImage) ? (
                   <img
-                    src={previewImage || profileData.photoURL}
+                    src={previewImage || currentUser?.photoURL || userData?.avatar?.url}
                     alt="Profile"
                     className="w-24 h-24 rounded-full border-4 border-white object-cover"
                   />
@@ -315,7 +314,7 @@ const Profile = () => {
           {/* Content */}
           <div className="p-6">
             {activeTab === 'profile' && (
-              <form onSubmit={handleProfileSubmit} className="space-y-6">
+              <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-6">
                 <div className="flex gap-6">
                   {/* Left: Profile Photo */}
                   <div className="flex-shrink-0">
@@ -324,9 +323,9 @@ const Profile = () => {
                     </label>
                     <div className="flex flex-col items-center space-y-3">
                       <div>
-                        {previewImage || profileData.photoURL ? (
+                        {previewImage || currentUser?.photoURL || userData?.avatar?.url ? (
                           <img
-                            src={previewImage || profileData.photoURL}
+                            src={previewImage || currentUser?.photoURL || userData?.avatar?.url}
                             alt="Preview"
                             className="w-24 h-24 rounded-full object-cover"
                           />
@@ -362,11 +361,18 @@ const Profile = () => {
                       <input
                         type="text"
                         id="displayName"
-                        name="displayName"
-                        value={profileData.displayName}
-                        onChange={handleProfileChange}
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                        {...profileForm.register('displayName')}
+                        className={`mt-1 block w-full px-3 py-2 border ${
+                          profileForm.formState.errors.displayName 
+                            ? 'border-red-500 focus:ring-red-500 focus:border-red-500' 
+                            : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                        } rounded-lg shadow-sm focus:outline-none focus:ring-2 sm:text-sm transition-colors`}
                       />
+                      {profileForm.formState.errors.displayName && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {profileForm.formState.errors.displayName.message}
+                        </p>
+                      )}
                     </div>
 
                     <div>
@@ -376,15 +382,24 @@ const Profile = () => {
                       <input
                         type="text"
                         id="username"
-                        name="username"
-                        value={profileData.username}
-                        onChange={handleProfileChange}
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                        {...profileForm.register('username')}
+                        className={`mt-1 block w-full px-3 py-2 border ${
+                          profileForm.formState.errors.username 
+                            ? 'border-red-500 focus:ring-red-500 focus:border-red-500' 
+                            : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                        } rounded-lg shadow-sm focus:outline-none focus:ring-2 sm:text-sm transition-colors`}
                         placeholder="johndoe123"
                       />
-                      <p className="mt-1 text-xs text-gray-500">
-                        3-20 characters, no spaces, letters, numbers and underscores only
-                      </p>
+                      {profileForm.formState.errors.username && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {profileForm.formState.errors.username.message}
+                        </p>
+                      )}
+                      {!profileForm.formState.errors.username && (
+                        <p className="mt-1 text-xs text-gray-500">
+                          3-20 characters, no spaces, letters, numbers and underscores only
+                        </p>
+                      )}
                     </div>
 
                     {!isOAuthUser && (
@@ -395,8 +410,7 @@ const Profile = () => {
                         <input
                           type="email"
                           id="email"
-                          name="email"
-                          value={profileData.email}
+                          {...profileForm.register('email')}
                           disabled
                           className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm bg-gray-100 cursor-not-allowed sm:text-sm"
                         />
@@ -411,17 +425,17 @@ const Profile = () => {
                 <div className="flex justify-end">
                   <button
                     type="submit"
-                    disabled={loading}
+                    disabled={profileForm.formState.isSubmitting}
                     className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition duration-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {loading ? 'Updating...' : 'Update Profile'}
+                    {profileForm.formState.isSubmitting ? 'Updating...' : 'Update Profile'}
                   </button>
                 </div>
               </form>
             )}
 
             {activeTab === 'password' && (
-              <form onSubmit={handlePasswordSubmit} className="space-y-6">
+              <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-6">
                 <div>
                   <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700">
                     New Password
@@ -429,12 +443,19 @@ const Profile = () => {
                   <input
                     type="password"
                     id="newPassword"
-                    name="newPassword"
-                    value={passwordData.newPassword}
-                    onChange={handlePasswordChange}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    {...passwordForm.register('newPassword')}
+                    className={`mt-1 block w-full px-3 py-2 border ${
+                      passwordForm.formState.errors.newPassword 
+                        ? 'border-red-500 focus:ring-red-500 focus:border-red-500' 
+                        : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                    } rounded-lg shadow-sm focus:outline-none focus:ring-2 sm:text-sm transition-colors`}
                     placeholder="Enter new password"
                   />
+                  {passwordForm.formState.errors.newPassword && (
+                    <p className="mt-1 text-sm text-red-600">
+                      {passwordForm.formState.errors.newPassword.message}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -444,12 +465,19 @@ const Profile = () => {
                   <input
                     type="password"
                     id="confirmPassword"
-                    name="confirmPassword"
-                    value={passwordData.confirmPassword}
-                    onChange={handlePasswordChange}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    {...passwordForm.register('confirmPassword')}
+                    className={`mt-1 block w-full px-3 py-2 border ${
+                      passwordForm.formState.errors.confirmPassword 
+                        ? 'border-red-500 focus:ring-red-500 focus:border-red-500' 
+                        : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                    } rounded-lg shadow-sm focus:outline-none focus:ring-2 sm:text-sm transition-colors`}
                     placeholder="Confirm new password"
                   />
+                  {passwordForm.formState.errors.confirmPassword && (
+                    <p className="mt-1 text-sm text-red-600">
+                      {passwordForm.formState.errors.confirmPassword.message}
+                    </p>
+                  )}
                 </div>
 
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
@@ -466,10 +494,10 @@ const Profile = () => {
                 <div className="flex justify-end">
                   <button
                     type="submit"
-                    disabled={loading}
+                    disabled={passwordForm.formState.isSubmitting}
                     className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition duration-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {loading ? 'Updating...' : 'Update Password'}
+                    {passwordForm.formState.isSubmitting ? 'Updating...' : 'Update Password'}
                   </button>
                 </div>
               </form>
