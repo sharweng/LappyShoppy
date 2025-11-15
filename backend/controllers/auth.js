@@ -258,6 +258,43 @@ exports.getUserEmail = async (req, res, next) => {
     }
 }
 
+// Check if username is available
+exports.checkUsername = async (req, res, next) => {
+    try {
+        const { username } = req.body;
+        
+        if (!username) {
+            return res.status(400).json({ 
+                success: false,
+                message: 'Please provide a username' 
+            });
+        }
+
+        // Check if username exists
+        const existingUser = await User.findOne({ username: username.toLowerCase() });
+        
+        if (existingUser) {
+            return res.status(200).json({
+                success: true,
+                available: false,
+                message: 'Username already taken'
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            available: true,
+            message: 'Username available'
+        });
+    } catch (error) {
+        console.error('Check username error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error checking username availability'
+        });
+    }
+}
+
 exports.forgotPassword = async (req, res, next) => {
     const user = await User.findOne({ email: req.body.email });
     if (!user) {

@@ -5,54 +5,40 @@ import { toast } from 'react-toastify';
 import { Laptop, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { FcGoogle } from 'react-icons/fc';
 import { FaFacebook } from 'react-icons/fa';
+import { useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import * as yup from 'yup';
+
+// Yup validation schema
+const loginSchema = yup.object().shape({
+  email: yup
+    .string()
+    .required('Email or username is required')
+    .trim(),
+  password: yup
+    .string()
+    .required('Password is required')
+    .min(6, 'Password must be at least 6 characters')
+});
 
 const Login = () => {
-  const [formData, setFormData] = useState({
-    email: '',
-    password: ''
-  });
-  const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState(false);
   const { login, signInWithGoogle, signInWithFacebook, logout } = useAuth();
   const navigate = useNavigate();
 
-  const { email, password } = formData;
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    setError
+  } = useForm({
+    resolver: yupResolver(loginSchema),
+    mode: 'onBlur'
+  });
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-    // Clear error for this field when user starts typing
-    if (errors[name]) {
-      setErrors({ ...errors, [name]: '' });
-    }
-  };
-
-  const validateForm = () => {
-    const newErrors = {};
-
-    if (!email.trim()) {
-      newErrors.email = 'Email or username is required';
-    }
-
-    if (!password) {
-      newErrors.password = 'Password is required';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!validateForm()) {
-      toast.error('Please fix the errors below');
-      return;
-    }
-
-    setLoading(true);
+  const onSubmit = async (data) => {
+    const { email, password } = data;
 
     try {
       // If input is not an email, get the email from backend first
@@ -69,14 +55,14 @@ const Login = () => {
           if (response.data.success) {
             loginEmail = response.data.email;
           } else {
+            setError('email', { type: 'manual', message: 'Username not found' });
             toast.error('Username not found');
-            setLoading(false);
             return;
           }
         } catch (error) {
           console.error('Error getting email:', error);
+          setError('email', { type: 'manual', message: 'Username not found' });
           toast.error('Username not found');
-          setLoading(false);
           return;
         }
       }
@@ -94,22 +80,21 @@ const Login = () => {
     } catch (error) {
       console.error('Login error:', error);
       if (error.code === 'auth/user-not-found') {
-        setErrors({ ...errors, email: 'No account found with this email' });
+        setError('email', { type: 'manual', message: 'No account found with this email' });
         toast.error('User not found');
       } else if (error.code === 'auth/wrong-password') {
-        setErrors({ ...errors, password: 'Incorrect password' });
+        setError('password', { type: 'manual', message: 'Incorrect password' });
         toast.error('Invalid password');
       } else if (error.code === 'auth/invalid-email') {
-        setErrors({ ...errors, email: 'Invalid email address' });
+        setError('email', { type: 'manual', message: 'Invalid email address' });
         toast.error('Invalid email address');
       } else if (error.code === 'auth/invalid-credential') {
-        setErrors({ email: 'Invalid email/username or password', password: 'Invalid email/username or password' });
+        setError('email', { type: 'manual', message: 'Invalid email/username or password' });
+        setError('password', { type: 'manual', message: 'Invalid email/username or password' });
         toast.error('Invalid email/username or password');
       } else {
         toast.error('Login failed. Please try again.');
       }
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -255,7 +240,7 @@ const Login = () => {
             Welcome back to LappyShoppy
           </p>
         </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
@@ -267,20 +252,17 @@ const Login = () => {
                 </div>
                 <input
                   id="email"
-                  name="email"
+                  {...register('email')}
                   type="text"
                   autoComplete="email"
-                  required
                   className={`appearance-none block w-full pl-10 pr-3 py-2 border ${
                     errors.email ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
-                  } placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:z-10 sm:text-sm`}
+                  } placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:z-10 sm:text-sm transition-colors`}
                   placeholder="john@example.com or johndoe"
-                  value={email}
-                  onChange={handleChange}
                 />
               </div>
               {errors.email && (
-                <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+                <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
               )}
             </div>
             <div>
@@ -293,16 +275,13 @@ const Login = () => {
                 </div>
                 <input
                   id="password"
-                  name="password"
+                  {...register('password')}
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
-                  required
                   className={`appearance-none block w-full pl-10 pr-10 py-2 border ${
                     errors.password ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
-                  } placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:z-10 sm:text-sm`}
+                  } placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:z-10 sm:text-sm transition-colors`}
                   placeholder="••••••••"
-                  value={password}
-                  onChange={handleChange}
                 />
                 <button
                   type="button"
@@ -317,7 +296,7 @@ const Login = () => {
                 </button>
               </div>
               {errors.password && (
-                <p className="mt-1 text-sm text-red-600">{errors.password}</p>
+                <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
               )}
             </div>
           </div>
@@ -345,10 +324,10 @@ const Login = () => {
           <div>
             <button
               type="submit"
-              disabled={loading}
+              disabled={isSubmitting}
               className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? (
+              {isSubmitting ? (
                 <span className="flex items-center">
                   <Loader2 className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" />
                   Signing in...
@@ -374,7 +353,7 @@ const Login = () => {
             <button
               type="button"
               onClick={handleGoogleSignIn}
-              disabled={socialLoading || loading}
+              disabled={socialLoading || isSubmitting}
               className="w-full inline-flex justify-center items-center py-2.5 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition duration-300"
             >
               <FcGoogle className="w-5 h-5 mr-2" />
@@ -383,7 +362,7 @@ const Login = () => {
             <button
               type="button"
               onClick={handleFacebookSignIn}
-              disabled={socialLoading || loading}
+              disabled={socialLoading || isSubmitting}
               className="w-full inline-flex justify-center items-center py-2.5 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition duration-300"
             >
               <FaFacebook className="w-5 h-5 mr-2 text-blue-600" />
