@@ -98,8 +98,8 @@ node backend/scripts/createAdmin.js
    - Go to Firebase Console → Authentication → Users
    - Add user: `admin@lappyshoppy.com` with your desired password
    - This enables admin functionality in the application
-
-   - Copy Uid in firbase and add a firebaseUid for Admin in MongoDB (If you want to log in with username)
+   - Copy Uid in firebase
+   - Add it as a firebaseUid for Admin in MongoDB 
 
 6. **Start Application**
 ```bash
