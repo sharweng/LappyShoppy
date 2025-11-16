@@ -99,6 +99,8 @@ node backend/scripts/createAdmin.js
    - Add user: `admin@lappyshoppy.com` with your desired password
    - This enables admin functionality in the application
 
+   - Copy Uid in firbase and add a firebaseUid for Admin in MongoDB (If you want to log in with username)
+
 6. **Start Application**
 ```bash
 # Backend (Terminal 1)
