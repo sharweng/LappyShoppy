@@ -84,6 +84,8 @@ const Dashboard = () => {
   const [monthlyProductsData, setMonthlyProductsData] = useState([]);
   const [productsData, setProductsData] = useState([]);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [showMonthlyLabels, setShowMonthlyLabels] = useState(true);
+  const [showOverviewLabels, setShowOverviewLabels] = useState(true);
 
   // Generate year options (current year and past 5 years)
   const yearOptions = [];
@@ -348,6 +350,17 @@ const Dashboard = () => {
                   Products
                 </button>
                 <button
+                  onClick={() => setShowMonthlyLabels(!showMonthlyLabels)}
+                  className={`px-3 py-1 text-sm rounded-lg transition-colors ${
+                    showMonthlyLabels
+                      ? 'bg-green-500 text-white'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                  title={showMonthlyLabels ? 'Hide labels' : 'Show labels'}
+                >
+                  {showMonthlyLabels ? 'Labels On' : 'Labels Off'}
+                </button>
+                <button
                   onClick={() => downloadChart(monthlyChartRef, `monthly-sales-${monthlyTab}-${selectedYear}.png`)}
                   className="px-3 py-1 text-sm bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center gap-1"
                 >
@@ -374,13 +387,15 @@ const Dashboard = () => {
                     activeDot={{ r: 6 }}
                     name={monthlyTab === 'money' ? 'Sales' : 'Products'}
                   >
-                    <LabelList 
-                      dataKey={monthlyTab === 'money' ? 'total' : 'totalQuantity'} 
-                      position="top" 
-                      offset={10}
-                      formatter={(value) => monthlyTab === 'money' ? `$${value.toLocaleString()}` : `${value}`}
-                      style={{ fontSize: '12px', fill: '#333' }}
-                    />
+                    {showMonthlyLabels && (
+                      <LabelList 
+                        dataKey={monthlyTab === 'money' ? 'total' : 'totalQuantity'} 
+                        position="top" 
+                        offset={10}
+                        formatter={(value) => value === 0 ? '' : (monthlyTab === 'money' ? `$${value.toLocaleString()}` : `${value}`)}
+                        style={{ fontSize: '12px', fill: '#333' }}
+                      />
+                    )}
                   </Line>
                 </LineChart>
               </ResponsiveContainer>
@@ -445,6 +460,17 @@ const Dashboard = () => {
                     Products
                   </button>
                   <button
+                    onClick={() => setShowOverviewLabels(!showOverviewLabels)}
+                    className={`px-3 py-1 text-sm rounded-lg transition-colors ${
+                      showOverviewLabels
+                        ? 'bg-green-500 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                    title={showOverviewLabels ? 'Hide labels' : 'Show labels'}
+                  >
+                    {showOverviewLabels ? 'Labels On' : 'Labels Off'}
+                  </button>
+                  <button
                     onClick={() => downloadChart(salesOverviewChartRef, `sales-overview-${saleOverviewTab}-${startDate}-to-${endDate}.png`)}
                     className="px-3 py-1 text-sm bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center gap-1"
                   >
@@ -482,13 +508,15 @@ const Dashboard = () => {
                     activeDot={{ r: 5 }}
                     name={saleOverviewTab === 'money' ? 'Sales' : 'Products'}
                   >
-                    <LabelList 
-                      dataKey={saleOverviewTab === 'money' ? 'sales' : 'totalQuantity'} 
-                      position="top" 
-                      offset={10}
-                      formatter={(value) => saleOverviewTab === 'money' ? `$${value.toLocaleString()}` : `${value}`}
-                      style={{ fontSize: '10px', fill: '#333' }}
-                    />
+                    {showOverviewLabels && (
+                      <LabelList 
+                        dataKey={saleOverviewTab === 'money' ? 'sales' : 'totalQuantity'} 
+                        position="top" 
+                        offset={10}
+                        formatter={(value) => value === 0 ? '' : (saleOverviewTab === 'money' ? `$${value.toLocaleString()}` : `${value}`)}
+                        style={{ fontSize: '10px', fill: '#333' }}
+                      />
+                    )}
                   </Line>
                 </LineChart>
               </ResponsiveContainer>
