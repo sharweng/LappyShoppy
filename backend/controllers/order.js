@@ -173,6 +173,8 @@ exports.updateOrder = async (req, res, next) => {
             await updateStock(item.product, item.quantity, 'add');
         }
         order.cancelledAt = Date.now();
+        // Update payment status to Failed when order is cancelled
+        order.paymentInfo.status = 'Failed'; 
     }
 
     // Only update stock when order is delivered (already subtracted at checkout)
