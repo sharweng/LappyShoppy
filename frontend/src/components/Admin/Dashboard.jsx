@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import AdminLayout from './AdminLayout';
 import { 
@@ -21,6 +21,17 @@ import {
 } from 'recharts';
 import axios from 'axios';
 import html2canvas from 'html2canvas';
+import {
+  Button,
+  ButtonGroup,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  TextField,
+  Box
+} from '@mui/material';
+import { Download as DownloadIcon } from '@mui/icons-material';
 
 // Format large numbers with K/M notation
 const formatNumber = (value) => {
@@ -69,7 +80,6 @@ const Dashboard = () => {
     totalOrders: 0,
     totalRevenue: 0
   });
-  const [loading, setLoading] = useState(true);
   const [startDate, setStartDate] = useState(() => {
     const date = new Date();
     date.setDate(date.getDate() - 7);
@@ -94,19 +104,7 @@ const Dashboard = () => {
     yearOptions.push(currentYear - i);
   }
 
-  useEffect(() => {
-    fetchStats();
-    fetchMonthlySalesData();
-    fetchMonthlyProductsData();
-    fetchSalesByDateRange();
-  }, []);
-
-  useEffect(() => {
-    fetchMonthlySalesData();
-    fetchMonthlyProductsData();
-  }, [selectedYear]);
-
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       // Get token from Firebase
       const token = await currentUser?.getIdToken();
@@ -142,12 +140,10 @@ const Dashboard = () => {
       });
     } catch (error) {
       console.error('Error fetching stats:', error);
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [currentUser]);
 
-  const fetchMonthlySalesData = async () => {
+  const fetchMonthlySalesData = useCallback(async () => {
     try {
       const token = await currentUser?.getIdToken();
       if (!token) return;
@@ -171,9 +167,9 @@ const Dashboard = () => {
     } catch (error) {
       console.error('Error fetching monthly sales:', error);
     }
-  };
+  }, [currentUser, selectedYear]);
 
-  const fetchMonthlyProductsData = async () => {
+  const fetchMonthlyProductsData = useCallback(async () => {
     try {
       const token = await currentUser?.getIdToken();
       if (!token) return;
@@ -197,9 +193,9 @@ const Dashboard = () => {
     } catch (error) {
       console.error('Error fetching monthly products:', error);
     }
-  };
+  }, [currentUser, selectedYear]);
 
-  const fetchSalesByDateRange = async (start = startDate, end = endDate) => {
+  const fetchSalesByDateRange = useCallback(async (start = startDate, end = endDate) => {
     try {
       setLoadingCharts(true);
       const token = await currentUser?.getIdToken();
@@ -250,7 +246,19 @@ const Dashboard = () => {
     } finally {
       setLoadingCharts(false);
     }
-  };
+  }, [currentUser, startDate, endDate]);
+
+  useEffect(() => {
+    fetchStats();
+    fetchMonthlySalesData();
+    fetchMonthlyProductsData();
+    fetchSalesByDateRange();
+  }, [fetchStats, fetchMonthlySalesData, fetchMonthlyProductsData, fetchSalesByDateRange]);
+
+  useEffect(() => {
+    fetchMonthlySalesData();
+    fetchMonthlyProductsData();
+  }, [fetchMonthlySalesData, fetchMonthlyProductsData, selectedYear]);
 
   const handleDateRangeChange = () => {
     fetchSalesByDateRange(startDate, endDate);
@@ -320,52 +328,51 @@ const Dashboard = () => {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
               <h2 className="text-xl font-bold text-gray-900">Monthly Sales ({selectedYear})</h2>
               <div className="flex gap-2 chart-controls">
-                <select
-                  value={selectedYear}
-                  onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                  className="px-3 py-1 text-sm border border-gray-300 rounded-lg bg-white"
-                >
-                  {yearOptions.map(year => (
-                    <option key={year} value={year}>{year}</option>
-                  ))}
-                </select>
-                <button
-                  onClick={() => setMonthlyTab('money')}
-                  className={`px-3 py-1 text-sm rounded-lg transition-colors ${
-                    monthlyTab === 'money'
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
-                >
-                  Money
-                </button>
-                <button
-                  onClick={() => setMonthlyTab('products')}
-                  className={`px-3 py-1 text-sm rounded-lg transition-colors ${
-                    monthlyTab === 'products'
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
-                >
-                  Products
-                </button>
-                <button
+                <FormControl size="small" style={{ minWidth: 100 }}>
+                  <InputLabel>Year</InputLabel>
+                  <Select
+                    value={selectedYear}
+                    label="Year"
+                    onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                  >
+                    {yearOptions.map(year => (
+                      <MenuItem key={year} value={year}>{year}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <ButtonGroup variant="outlined" size="small">
+                  <Button 
+                    variant={monthlyTab === 'money' ? 'contained' : 'outlined'}
+                    onClick={() => setMonthlyTab('money')}
+                  >
+                    Money
+                  </Button>
+                  <Button 
+                    variant={monthlyTab === 'products' ? 'contained' : 'outlined'}
+                    onClick={() => setMonthlyTab('products')}
+                  >
+                    Products
+                  </Button>
+                </ButtonGroup>
+                <Button
+                  variant={showMonthlyLabels ? 'contained' : 'outlined'}
+                  size="small"
+                  color={showMonthlyLabels ? 'success' : 'inherit'}
                   onClick={() => setShowMonthlyLabels(!showMonthlyLabels)}
-                  className={`px-3 py-1 text-sm rounded-lg transition-colors ${
-                    showMonthlyLabels
-                      ? 'bg-green-500 text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
                   title={showMonthlyLabels ? 'Hide labels' : 'Show labels'}
+                  sx={{ minWidth: '103px' }}
                 >
                   {showMonthlyLabels ? 'Labels On' : 'Labels Off'}
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="contained"
+                  size="small"
+                  color="success"
+                  startIcon={<DownloadIcon />}
                   onClick={() => downloadChart(monthlyChartRef, `monthly-sales-${monthlyTab}-${selectedYear}.png`)}
-                  className="px-3 py-1 text-sm bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center gap-1"
                 >
-                  <Download className="w-4 h-4" /> Download PNG
-                </button>
+                  PNG
+                </Button>
               </div>
             </div>
             {monthlySalesData.length > 0 || monthlyProductsData.length > 0 ? (
@@ -415,67 +422,67 @@ const Dashboard = () => {
               <div className="flex flex-col sm:flex-row gap-2">
                 
                 <div className="flex gap-1 chart-controls">
-                  <label className="text-sm text-gray-700 self-center">From:</label>
-                  <input
+                  <TextField
+                    label="From"
                     type="date"
+                    size="small"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="px-2 py-1 border border-gray-300 rounded-lg text-sm"
+                    InputLabelProps={{ shrink: true }}
                   />
                 </div>
                 <div className="flex gap-1 chart-controls">
-                  <label className="text-sm text-gray-700 self-center">To:</label>
-                  <input
+                  <TextField
+                    label="To"
                     type="date"
+                    size="small"
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
-                    className="px-2 py-1 border border-gray-300 rounded-lg text-sm"
+                    InputLabelProps={{ shrink: true }}
                   />
                 </div>
-                <button
+                <Button
+                  variant="contained"
+                  size="small"
                   onClick={handleDateRangeChange}
-                  className="px-4 py-1 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition-colors chart-controls"
+                  className="chart-controls"
                 >
                   Filter
-                </button>
+                </Button>
                 <div className="flex gap-2 chart-controls">
-                  <button
-                    onClick={() => setSaleOverviewTab('money')}
-                    className={`px-3 py-1 text-sm rounded-lg transition-colors ${
-                      saleOverviewTab === 'money'
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    }`}
-                  >
-                    Money
-                  </button>
-                  <button
-                    onClick={() => setSaleOverviewTab('products')}
-                    className={`px-3 py-1 text-sm rounded-lg transition-colors ${
-                      saleOverviewTab === 'products'
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    }`}
-                  >
-                    Products
-                  </button>
-                  <button
+                  <ButtonGroup variant="outlined" size="small">
+                    <Button 
+                      variant={saleOverviewTab === 'money' ? 'contained' : 'outlined'}
+                      onClick={() => setSaleOverviewTab('money')}
+                    >
+                      Money
+                    </Button>
+                    <Button 
+                      variant={saleOverviewTab === 'products' ? 'contained' : 'outlined'}
+                      onClick={() => setSaleOverviewTab('products')}
+                    >
+                      Products
+                    </Button>
+                  </ButtonGroup>
+                  <Button
+                    variant={showOverviewLabels ? 'contained' : 'outlined'}
+                    size="small"
+                    color={showOverviewLabels ? 'success' : 'inherit'}
                     onClick={() => setShowOverviewLabels(!showOverviewLabels)}
-                    className={`px-3 py-1 text-sm rounded-lg transition-colors ${
-                      showOverviewLabels
-                        ? 'bg-green-500 text-white'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    }`}
                     title={showOverviewLabels ? 'Hide labels' : 'Show labels'}
+                    sx={{ minWidth: '103px' }}
                   >
                     {showOverviewLabels ? 'Labels On' : 'Labels Off'}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    color="success"
+                    startIcon={<DownloadIcon />}
                     onClick={() => downloadChart(salesOverviewChartRef, `sales-overview-${saleOverviewTab}-${startDate}-to-${endDate}.png`)}
-                    className="px-3 py-1 text-sm bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center gap-1"
                   >
-                    <Download className="w-4 h-4" /> Download PNG
-                  </button>
+                    PNG
+                  </Button>
                 </div>
               </div>
             </div>

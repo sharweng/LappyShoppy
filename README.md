@@ -19,7 +19,6 @@
 ### ✨ Key Features
 - 🔐 Firebase authentication (Email/Password, Google, Facebook)
 - 👤 User profiles with photo uploads
-- 📱 Responsive design
 - ⚡ Fast performance with Vite
 
 ---
@@ -58,7 +57,7 @@ cd ../frontend && npm install
 **Backend `.env`:**
 ```env
 PORT=4001
-DB_URI=mongodb://localhost:27017/lappyshoppy
+DB_URI=your_mongodb_URI
 JWT_SECRET=your_jwt_secret
 CLOUDINARY_CLOUD_NAME=your_cloudinary_name
 CLOUDINARY_API_KEY=your_cloudinary_key
