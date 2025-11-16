@@ -87,11 +87,33 @@ VITE_FIREBASE_APP_ID=your_app_id
 
 4. **Database Setup**
 ```bash
-# Populate sample products and calculate ratings
-cd backend && node scripts/addSampleProducts.js
+# Populate with sample admin, users, orders, and reviews
+cd backend && npm run setup
+```
 
-# Create admin user (automatically creates both Firebase and MongoDB entries)
-cd backend && node scripts/createAdmin.js
+This will run all setup scripts in order:
+- Create admin user (admin@lappyshoppy.com / admin123)
+- Add 24 sample laptop products with images
+- Create 24 sample users
+- Generate sample orders
+- Add reviews for delivered orders
+
+4.5. **You can also run individual scripts if needed:**
+```bash
+# Create admin user
+node scripts/createAdmin.js
+
+# Add sample products
+node scripts/addSampleProducts.js
+
+# Add sample users
+node scripts/addSampleUsers.js
+
+# Add sample orders
+node scripts/addSampleOrders.js
+
+# Add sample reviews
+node scripts/addSampleReviews.js
 ```
 
 5. **Start Application**
