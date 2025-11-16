@@ -125,6 +125,15 @@ cd backend && npm run dev
 cd frontend && npm run dev
 ```
 
+Extras. **Other Commands**
+```bash
+# Kill process on port 5173 (frontend)
+lsof -ti:5173 | xargs kill -9
+
+# Kill process on port 4001 (backend)  
+lsof -ti:4001 | xargs kill -9
+```
+
 Visit http://localhost:5173
 
 ### ⚠️ Important Notes

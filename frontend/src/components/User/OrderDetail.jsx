@@ -165,7 +165,7 @@ const OrderDetail = () => {
               </h2>
               <div className="bg-gray-50 rounded-lg p-4 space-y-2">
                 <p className="text-gray-900"><span className="font-semibold">Method:</span> {order.paymentInfo.id === 'COD' ? 'Cash on Delivery' : 'Card Payment'}</p>
-                <p className="text-gray-900"><span className="font-semibold">Status:</span> {order.paymentInfo.status === 'paid' ? 'Paid' : 'Pending'}</p>
+                <p className="text-gray-900"><span className="font-semibold">Status:</span> {order.paymentInfo.status}</p>
                 {order.paidAt && (
                   <p className="text-gray-900"><span className="font-semibold">Paid At:</span> {new Date(order.paidAt).toLocaleDateString()}</p>
                 )}

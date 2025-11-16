@@ -3,7 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useLayoutEffect } from 'react';
 import axios from 'axios';
 
 // Components
@@ -193,9 +193,23 @@ function AppContent() {
   );
 }
 
+// ScrollToTop: scrolls window to top whenever the pathname changes
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  // useLayoutEffect runs synchronously after DOM mutations but before paint.
+  // This prevents the browser from briefly restoring the previous scroll
+  // position when navigating back/forward and ensures the page starts at top.
+  useLayoutEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [pathname]);
+
+  return null;
+}
+
 function App() {
   return (
     <Router>
+      <ScrollToTop />
       <AuthProvider>
         <CartProvider>
           <AppContent />

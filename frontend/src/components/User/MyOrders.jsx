@@ -76,23 +76,12 @@ const MyOrders = () => {
     }
   };
 
-  const filteredOrders = filter === 'all' 
-    ? orders.slice().sort((a, b) => {
-        // Delivered orders go to bottom, others at top
-        const aIsDelivered = a.orderStatus === 'Delivered' ? 1 : 0;
-        const bIsDelivered = b.orderStatus === 'Delivered' ? 1 : 0;
-        
-        if (aIsDelivered !== bIsDelivered) {
-          return aIsDelivered - bIsDelivered;
-        }
-        
-        // Within same group, sort by date (latest first)
-        return new Date(b.createdAt) - new Date(a.createdAt);
-      })
-    : orders.filter(order => order.orderStatus === filter).slice().sort((a, b) => {
-        // Sort by date (latest first)
-        return new Date(b.createdAt) - new Date(a.createdAt);
-      });
+  // When viewing "All Orders" we want a simple date-based ordering (latest first).
+  // Previously delivered orders were forced to the bottom; change to chronological only.
+  const filteredOrders = (filter === 'all'
+    ? orders.slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    : orders.filter(order => order.orderStatus === filter).slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+  );
 
   if (loading) {
     return (
