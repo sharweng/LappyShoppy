@@ -368,10 +368,9 @@ const Dashboard = () => {
                   variant="contained"
                   size="small"
                   color="success"
-                  startIcon={<DownloadIcon />}
                   onClick={() => downloadChart(monthlyChartRef, `monthly-sales-${monthlyTab}-${selectedYear}.png`)}
                 >
-                  PNG
+                  <DownloadIcon />
                 </Button>
               </div>
             </div>
@@ -427,7 +426,10 @@ const Dashboard = () => {
                     type="date"
                     size="small"
                     value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
+                    onChange={(e) => {
+                      setStartDate(e.target.value);
+                      fetchSalesByDateRange(e.target.value, endDate);
+                    }}
                     InputLabelProps={{ shrink: true }}
                   />
                 </div>
@@ -437,18 +439,13 @@ const Dashboard = () => {
                     type="date"
                     size="small"
                     value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
+                    onChange={(e) => {
+                      setEndDate(e.target.value);
+                      fetchSalesByDateRange(startDate, e.target.value);
+                    }}
                     InputLabelProps={{ shrink: true }}
                   />
                 </div>
-                <Button
-                  variant="contained"
-                  size="small"
-                  onClick={handleDateRangeChange}
-                  className="chart-controls"
-                >
-                  Filter
-                </Button>
                 <div className="flex gap-2 chart-controls">
                   <ButtonGroup variant="outlined" size="small">
                     <Button 
@@ -478,10 +475,9 @@ const Dashboard = () => {
                     variant="contained"
                     size="small"
                     color="success"
-                    startIcon={<DownloadIcon />}
                     onClick={() => downloadChart(salesOverviewChartRef, `sales-overview-${saleOverviewTab}-${startDate}-to-${endDate}.png`)}
                   >
-                    PNG
+                    <DownloadIcon />
                   </Button>
                 </div>
               </div>
