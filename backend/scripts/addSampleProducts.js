@@ -577,19 +577,21 @@ const addProducts = async () => {
         }
 
         console.log('\n==========================================');
-        console.log('Summary:');
+        console.log('Products Summary:');
         console.log(`✅ Successfully added: ${successCount} products`);
         console.log(`❌ Failed: ${errorCount} products`);
-        console.log('==========================================');
+        console.log('==========================================\n');
 
-        console.log('\n🎉 Sample products have been added to your database!');
-        console.log('\n📝 Next steps:');
+        // Now recalculate ratings for all products
+        await recalculateAllRatings();
+
+        console.log('\n🎉 Sample products have been added and ratings recalculated!');
+        console.log('\n📝 What it did:');
         console.log('1. Images are loaded from: backend/scripts/product-images/[Product Name]/');
         console.log('2. Supported formats: .jpg, .jpeg, .png, .webp, .avif');
         console.log('3. Each product can have multiple images in its folder');
         console.log('4. Start your backend: npm run dev');
         console.log('5. Start your frontend: npm run dev');
-        console.log('6. Login as admin and navigate to /admin/products\n');
 
         process.exit(0);
     } catch (error) {
@@ -597,5 +599,40 @@ const addProducts = async () => {
         process.exit(1);
     }
 };
+
+async function recalculateAllRatings() {
+    try {
+        console.log('🔄 Recalculating ratings for all products...\n');
+        
+        // Get all products
+        const products = await Product.find();
+        
+        let updatedCount = 0;
+        
+        for (const product of products) {
+            // Calculate ratings from reviews
+            const numOfReviews = product.reviews.length;
+            const ratings = numOfReviews > 0 
+                ? product.reviews.reduce((acc, item) => item.rating + acc, 0) / numOfReviews 
+                : 0;
+            
+            // Update product
+            product.ratings = ratings;
+            product.numOfReviews = numOfReviews;
+            await product.save({ validateBeforeSave: false });
+            
+            updatedCount++;
+            console.log(`✓ Updated ${product.name}: ${numOfReviews} reviews, ${ratings.toFixed(1)} rating`);
+        }
+        
+        console.log('\n==========================================');
+        console.log('Ratings Summary:');
+        console.log(`✅ Successfully recalculated ratings for ${updatedCount} products`);
+        console.log('==========================================');
+    } catch (error) {
+        console.error('Error recalculating ratings:', error);
+        throw error; // Re-throw to be caught by main function
+    }
+}
 
 addProducts();

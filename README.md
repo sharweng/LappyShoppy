@@ -88,20 +88,13 @@ VITE_FIREBASE_APP_ID=your_app_id
 4. **Database Setup**
 ```bash
 # Populate sample products and calculate ratings
-node backend/scripts/addSampleProducts.js && node backend/scripts/recalculateRatings.js
+cd backend && node scripts/addSampleProducts.js
 
-# Create admin user
-node backend/scripts/createAdmin.js
+# Create admin user (automatically creates both Firebase and MongoDB entries)
+cd backend && node scripts/createAdmin.js
 ```
 
-5. **Create Admin Account in Firebase**
-   - Go to Firebase Console → Authentication → Users
-   - Add user: `admin@lappyshoppy.com` with your desired password
-   - This enables admin functionality in the application
-   - Copy Uid in firebase
-   - Add it as a firebaseUid for Admin in MongoDB 
-
-6. **Start Application**
+5. **Start Application**
 ```bash
 # Backend (Terminal 1)
 cd backend && npm run dev
@@ -116,6 +109,7 @@ Visit http://localhost:5173
 - **Firebase configuration is required** for Google/Facebook sign-in to work
 - Without proper Firebase setup, only email/password authentication will work
 - MongoDB must be running locally or use MongoDB Atlas
+- **Admin account is created automatically** with email `admin@lappyshoppy.com` and password `admin123`
 
 ---
 
