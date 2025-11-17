@@ -959,7 +959,7 @@ const ProductDetail = () => {
             )}
 
             {/* Main Image Container - Constrained for high-quality images */}
-            <div className="relative max-w-5xl max-h-full bg-white rounded-lg shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="relative max-w-5xl max-h-[calc(100vh-4rem)] bg-white rounded-lg shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
               <img
                 src={product.images[selectedImageIndex].url}
                 alt={product.name}
