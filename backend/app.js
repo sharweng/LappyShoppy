@@ -12,7 +12,9 @@ const admin = require('./routes/admin');
 
 app.use(express.json({limit:'50mb'}));
 app.use(express.urlencoded({limit: "50mb", extended: true }));
-app.use(cors());
+if(process.env.NODE_ENV !== 'PRODUCTION') {
+    app.use(cors())
+}
 app.use(cookieParser());
 
 
