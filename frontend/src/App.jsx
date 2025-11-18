@@ -46,7 +46,7 @@ function AppContent() {
               'Authorization': `Bearer ${token}`
             }
           };
-          const { data } = await axios.get('http://localhost:4001/api/v1/me', config);
+          const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/v1/me`, config);
           setIsAdmin(data.user.role === 'admin');
         } catch (error) {
           console.error('Error checking admin status:', error);

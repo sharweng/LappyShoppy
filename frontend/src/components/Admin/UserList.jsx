@@ -9,7 +9,7 @@ import { Delete as DeleteIcon } from '@mui/icons-material';
 import { visuallyHidden } from '@mui/utils';
 import { CSVLink } from 'react-csv';
 
-const API_URL = 'http://localhost:4001/api/v1';
+const API_URL = `${import.meta.env.VITE_API_BASE_URL}/api/v1`;
 
 const headCells = [
   { id: 'username', label: 'Username', align: 'left' },

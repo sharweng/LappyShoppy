@@ -23,7 +23,7 @@ const Navbar = () => {
       const fetchUserData = async () => {
         try {
           const token = await currentUser.getIdToken();
-          const { data } = await axios.get('http://localhost:4001/api/v1/me', {
+          const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/v1/me`, {
             headers: {
               'Authorization': `Bearer ${token}`
             }

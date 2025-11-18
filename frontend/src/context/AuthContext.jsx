@@ -152,7 +152,7 @@ export const AuthProvider = ({ children }) => {
           'Authorization': `Bearer ${token}`
         }
       };
-      const { data } = await axios.get('http://localhost:4001/api/v1/me', config);
+      const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/v1/me`, config);
       setUserProfile(data.user);
       return data.user;
     } catch (error) {
@@ -181,7 +181,7 @@ export const AuthProvider = ({ children }) => {
         }
       };
       const { data } = await axios.put(
-        'http://localhost:4001/api/v1/me/update',
+        `${import.meta.env.VITE_API_BASE_URL}/api/v1/me/update`,
         userData,
         config
       );

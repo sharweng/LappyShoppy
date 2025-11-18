@@ -42,7 +42,7 @@ const ResetPassword = () => {
     try {
       // Step 1: Verify the token and get user email from backend
       const { data: verifyData } = await axios.get(
-        `http://localhost:4001/api/v1/password/reset/${token}/verify`
+        `${import.meta.env.VITE_API_BASE_URL}/api/v1/password/reset/${token}/verify`
       );
 
       if (!verifyData.success) {
@@ -56,7 +56,7 @@ const ResetPassword = () => {
       // Since we need to update password in Firebase, we'll need the user to be authenticated
       // But we don't have their old password. So we'll use a backend endpoint to get a custom token
       const authResponse = await axios.post(
-        `http://localhost:4001/api/v1/password/reset/${token}/auth`,
+        `${import.meta.env.VITE_API_BASE_URL}/api/v1/password/reset/${token}/auth`,
         { newPassword: password }
       );
 

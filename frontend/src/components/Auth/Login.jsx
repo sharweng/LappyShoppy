@@ -49,7 +49,7 @@ const Login = () => {
         // It's a username, get the email from backend
         try {
           const axios = (await import('axios')).default;
-          const response = await axios.post('http://localhost:4001/api/v1/get-user-email', {
+          const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/v1/get-user-email`, {
             identifier: email
           });
           
@@ -76,7 +76,7 @@ const Login = () => {
       if (firebaseUser) {
         const token = await firebaseUser.getIdToken();
         try {
-          const checkResponse = await fetch('http://localhost:4001/api/v1/me', {
+          const checkResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/v1/me`, {
             headers: {
               'Authorization': `Bearer ${token}`
             }
@@ -155,7 +155,7 @@ const Login = () => {
       
       // Check if user exists in backend
       try {
-        const checkResponse = await fetch('http://localhost:4001/api/v1/me', {
+        const checkResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/v1/me`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -189,7 +189,7 @@ const Login = () => {
         }
         
         const axios = (await import('axios')).default;
-        await axios.post('http://localhost:4001/api/v1/register', registrationData);
+        await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/v1/register`, registrationData);
         toast.success('Account created and signed in successfully!');
         navigate('/');
       } catch (backendError) {
@@ -222,7 +222,7 @@ const Login = () => {
       
       // Check if user exists in backend
       try {
-        const checkResponse = await fetch('http://localhost:4001/api/v1/me', {
+        const checkResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/v1/me`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -256,7 +256,7 @@ const Login = () => {
         }
         
         const axios = (await import('axios')).default;
-        await axios.post('http://localhost:4001/api/v1/register', registrationData);
+        await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/v1/register`, registrationData);
         toast.success('Account created and signed in successfully!');
         navigate('/');
       } catch (backendError) {

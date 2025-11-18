@@ -122,10 +122,10 @@ const Dashboard = () => {
 
       // Fetch all stats in parallel
       const [usersRes, ordersRes, salesRes, productsRes] = await Promise.all([
-        axios.get('http://localhost:4001/api/v1/admin/users', config).catch(() => ({ data: { users: [] } })),
-        axios.get('http://localhost:4001/api/v1/admin/total-orders', config).catch(() => ({ data: { totalOrders: [] } })),
-        axios.get('http://localhost:4001/api/v1/admin/total-sales', config).catch(() => ({ data: { totalSales: [] } })),
-        axios.get('http://localhost:4001/api/v1/products', config).catch(() => ({ data: { productsCount: 0 } }))
+        axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/v1/admin/users`, config).catch(() => ({ data: { users: [] } })),
+        axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/v1/admin/total-orders`, config).catch(() => ({ data: { totalOrders: [] } })),
+        axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/v1/admin/total-sales`, config).catch(() => ({ data: { totalSales: [] } })),
+        axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/v1/products`, config).catch(() => ({ data: { productsCount: 0 } }))
       ]);
       
       const totalOrders = ordersRes.data.totalOrders?.[0]?.count || 0;
@@ -154,7 +154,7 @@ const Dashboard = () => {
         }
       };
 
-      const { data } = await axios.get('http://localhost:4001/api/v1/admin/sales-per-month', {
+      const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/v1/admin/sales-per-month`, {
         ...config,
         params: {
           year: selectedYear
@@ -180,7 +180,7 @@ const Dashboard = () => {
         }
       };
 
-      const { data } = await axios.get('http://localhost:4001/api/v1/admin/products-sold-per-month', {
+      const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/v1/admin/products-sold-per-month`, {
         ...config,
         params: {
           year: selectedYear
@@ -208,14 +208,14 @@ const Dashboard = () => {
       };
 
       const [salesRes, productsRes] = await Promise.all([
-        axios.get('http://localhost:4001/api/v1/admin/sales-by-date-range', {
+        axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/v1/admin/sales-by-date-range`, {
           ...config,
           params: {
             startDate: start,
             endDate: end
           }
         }),
-        axios.get('http://localhost:4001/api/v1/admin/products-sold-by-date-range', {
+        axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/v1/admin/products-sold-by-date-range`, {
           ...config,
           params: {
             startDate: start,

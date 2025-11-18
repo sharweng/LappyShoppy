@@ -33,7 +33,7 @@ import { visuallyHidden } from '@mui/utils';
 import { toast } from 'react-toastify';
 import { CSVLink } from 'react-csv';
 
-const API_URL = 'http://localhost:4001/api/v1';
+const API_URL = `${import.meta.env.VITE_API_BASE_URL}/api/v1`;
 
 // Order status badges with colors
 const statusColors = {

@@ -88,7 +88,7 @@ const Profile = () => {
               'Authorization': `Bearer ${token}`
             }
           };
-          const { data } = await axios.get('http://localhost:4001/api/v1/me', config);
+          const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/v1/me`, config);
           setIsAdmin(data.user.role === 'admin');
           setUserData(data.user);
           
@@ -141,7 +141,7 @@ const Profile = () => {
   const uploadToCloudinary = async (base64Image) => {
     try {
       const response = await axios.post(
-        'http://localhost:4001/api/v1/upload/avatar',
+        `${import.meta.env.VITE_API_BASE_URL}/api/v1/upload/avatar`,
         { image: base64Image },
         {
           headers: {
@@ -202,7 +202,7 @@ const Profile = () => {
       }
 
       const response = await axios.put(
-        'http://localhost:4001/api/v1/me/update',
+        `${import.meta.env.VITE_API_BASE_URL}/api/v1/me/update`,
         updateData,
         {
           headers: {

@@ -304,7 +304,7 @@ exports.forgotPassword = async (req, res, next) => {
     const resetToken = user.getResetPasswordToken();
     await user.save({ validateBeforeSave: false });
     // Create reset password url
-    const resetUrl = `${req.protocol}://localhost:5173/password/reset/${resetToken}`;
+    const resetUrl = `${process.env.CLIENT_URL}/password/reset/${resetToken}`;
     
     try {
         // Get professional HTML email template
